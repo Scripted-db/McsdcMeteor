@@ -89,7 +89,7 @@ public class McsdcScreen extends WindowScreen {
         };
 
         friendsButton.action = () -> {
-            this.client.setScreen(FriendsScreen.instance(this.multiplayerScreen, this));
+            this.client.setScreen(FriendsScreen.instance(this));
         };
     }
 

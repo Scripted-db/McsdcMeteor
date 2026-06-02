@@ -8,31 +8,46 @@ import com.mcsdc.addon.system.McsdcSystem;
 import meteordevelopment.meteorclient.utils.network.Http;
 import org.jetbrains.annotations.Nullable;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.util.concurrent.Executors;
+
 public final class Api {
     private static final String[] STATUS_KEYS = {
         "visited", "griefed", "modded", "whitelist", "save_for_later", "banned", "cracked"
     };
     private static final String[] ARRAY_KEYS = { "servers", "results", "rows", "list", "items" };
 
+    private static final HttpClient HTTP = HttpClient.newBuilder()
+        .executor(Executors.newVirtualThreadPerTaskExecutor())
+        .build();
+
     private Api() {}
+
+    public record JsonResult(@Nullable String body, @Nullable String error) {
+        public boolean ok() { return error == null; }
+    }
 
     public static String url(String path) {
         return Main.apiBase + (path.startsWith("/") ? path : "/" + path);
     }
 
-    public static Http.Request get(String path) {
-        Http.Request req = Http.get(url(path));
+    private static Http.Request withAuth(Http.Request req) {
         String token = McsdcSystem.get().getToken();
         if (!token.isEmpty()) req.header("Authorization", "Bearer " + token);
         return req;
     }
 
+    public static Http.Request get(String path) {
+        return withAuth(Http.get(url(path)));
+    }
+
     public static Http.Request post(String path, @Nullable JsonObject body) {
         Http.Request req = Http.post(url(path));
         if (body != null) req.bodyJson(body);
-        String token = McsdcSystem.get().getToken();
-        if (!token.isEmpty()) req.header("Authorization", "Bearer " + token);
-        return req;
+        return withAuth(req);
     }
 
     public static Http.Request postPublic(String path, JsonObject body) {
@@ -46,12 +61,41 @@ public final class Api {
 
     @Nullable
     public static String getJson(String path) {
-        return responseBody(get(path).sendStringResponse());
+        return requestGet(path).body();
     }
 
     @Nullable
     public static String postJson(String path, @Nullable JsonObject body) {
-        return responseBody(post(path, body).sendStringResponse());
+        return requestPost(path, body).body();
+    }
+
+    public static JsonResult requestGet(String path) {
+        return parseResponse(get(path).sendStringResponse());
+    }
+
+    public static JsonResult requestPost(String path, @Nullable JsonObject body) {
+        return parseResponse(post(path, body).sendStringResponse());
+    }
+
+    public static void delete(String path) {
+        HttpRequest.Builder req = HttpRequest.newBuilder().uri(URI.create(url(path))).DELETE();
+        String token = McsdcSystem.get().getToken();
+        if (!token.isEmpty()) req.header("Authorization", "Bearer " + token);
+        try {
+            HTTP.send(req.build(), HttpResponse.BodyHandlers.discarding());
+        } catch (Exception ignored) {}
+    }
+
+    private static JsonResult parseResponse(@Nullable java.net.http.HttpResponse<String> response) {
+        if (response == null) return new JsonResult(null, "no response");
+        String body = response.body();
+        if (response.statusCode() != Http.SUCCESS) {
+            String err = errorFrom(body);
+            return new JsonResult(body, err != null ? err : "request failed (" + response.statusCode() + ")");
+        }
+        String err = errorFrom(body);
+        if (err != null) return new JsonResult(body, err);
+        return new JsonResult(body, null);
     }
 
     @Nullable

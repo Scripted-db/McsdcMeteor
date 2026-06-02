@@ -11,7 +11,6 @@ import meteordevelopment.meteorclient.gui.widgets.containers.WHorizontalList;
 import meteordevelopment.meteorclient.gui.widgets.containers.WTable;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WButton;
 import meteordevelopment.meteorclient.settings.Setting;
-import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.settings.Settings;
 import meteordevelopment.meteorclient.settings.StringSetting;
 import net.minecraft.client.gui.screen.Screen;
@@ -28,39 +27,29 @@ import java.util.concurrent.CompletableFuture;
 import static meteordevelopment.meteorclient.MeteorClient.mc;
 
 public class FriendsScreen extends WindowScreen {
-    private static FriendsScreen instance = null;
+    private static FriendsScreen instance;
 
-    private MultiplayerScreen multiplayerScreen;
     private Screen parent;
+    private boolean locationsTab;
 
-    private int section = 0;
-    private boolean listLoading = true;
-    private boolean listLoaded = false;
-    private String listError = "";
-    private JsonArray friends = new JsonArray();
+    private final TabData list = new TabData();
+    private final TabData locations = new TabData();
 
-    private boolean locationsLoading = false;
-    private boolean locationsLoaded = false;
-    private String locationsError = "";
-    private JsonArray locations = new JsonArray();
-
-    @Nullable
-    private String busy = null;
+    @Nullable private String busy;
 
     private final Settings settings = new Settings();
-    private final SettingGroup sg = settings.getDefaultGroup();
-    private final Setting<String> nameSetting = sg.add(new StringSetting.Builder()
+    private final Setting<String> nameSetting = settings.getDefaultGroup().add(new StringSetting.Builder()
         .name("username")
         .description("")
         .defaultValue("")
         .build()
     );
 
-    public static FriendsScreen instance(MultiplayerScreen multiplayerScreen, Screen parent) {
+    public static FriendsScreen instance(Screen parent) {
         if (instance == null) instance = new FriendsScreen();
-        instance.multiplayerScreen = multiplayerScreen;
         instance.parent = parent;
-        instance.resetList();
+        instance.busy = null;
+        instance.list.invalidate();
         return instance;
     }
 
@@ -68,64 +57,34 @@ public class FriendsScreen extends WindowScreen {
         super(GuiThemes.get(), "Friends");
     }
 
-    private void resetList() {
-        listLoading = true;
-        listLoaded = false;
-        listError = "";
-        friends = new JsonArray();
-        locationsLoaded = false;
-        locationsLoading = false;
-        locationsError = "";
-        locations = new JsonArray();
-        busy = null;
-        section = 0;
-    }
-
     @Override
     public void initWidgets() {
         WHorizontalList tabs = add(theme.horizontalList()).expandX().widget();
-
-        WButton listTab = tabs.add(theme.button("list")).expandX().widget();
-        listTab.action = () -> {
-            section = 0;
+        tabs.add(theme.button("list")).expandX().widget().action = () -> {
+            locationsTab = false;
+            reload();
+        };
+        tabs.add(theme.button("on a server")).expandX().widget().action = () -> {
+            locationsTab = true;
+            locations.invalidate();
             reload();
         };
 
-        WButton locationsTab = tabs.add(theme.button("on a server")).expandX().widget();
-        locationsTab.action = () -> {
-            section = 1;
-            locationsLoaded = false;
-            reload();
-        };
-
-        if (section == 0) {
-            initListTab();
-        } else {
-            initLocationsTab();
-        }
+        if (locationsTab) initLocationsTab();
+        else initListTab();
     }
 
     private void initListTab() {
-        if (!listLoaded) {
-            add(theme.label("loading…")).expandX();
-            if (!listLoading) loadFriends();
-            return;
-        }
+        if (pending(list, () -> fetchArray("/my/friends", list))) return;
 
-        if (!listError.isEmpty()) {
-            add(theme.label(listError)).expandX();
-        }
+        if (!list.error.isEmpty()) add(theme.label(list.error)).expandX();
 
         WHorizontalList addRow = add(theme.horizontalList()).expandX().widget();
         addRow.add(theme.settings(settings)).expandX();
-        if (busy != null) {
-            addRow.add(theme.label("…"));
-        } else {
-            WButton addButton = addRow.add(theme.button("add")).widget();
-            addButton.action = this::addFriend;
-        }
+        if (busy != null) addRow.add(theme.label("…"));
+        else addRow.add(theme.button("add")).widget().action = this::addFriend;
 
-        if (friends.isEmpty()) {
+        if (list.items.isEmpty()) {
             add(theme.label("no friends yet")).expandX();
             return;
         }
@@ -136,20 +95,18 @@ public class FriendsScreen extends WindowScreen {
         table.add(theme.label("Stage"));
         table.row();
 
-        for (JsonElement el : friends) {
+        for (JsonElement el : list.items) {
             if (!el.isJsonObject()) continue;
             JsonObject f = el.getAsJsonObject();
-            String name = f.has("name") ? f.get("name").getAsString() : "";
-            String role = f.has("role") ? f.get("role").getAsString() : "user";
-            String stage = f.has("stage") && !f.get("stage").isJsonNull() ? f.get("stage").getAsString() : "";
+            String name = str(f, "name");
+            String stage = str(f, "stage");
 
             table.add(theme.label(name)).expandX();
-            table.add(theme.label(roleLabel(role)));
+            table.add(theme.label(str(f, "role", "user")));
             table.add(theme.label(stage.isEmpty() ? "—" : stage));
 
-            if (busy != null) {
-                table.add(theme.label(busy.equals(name) ? "…" : "—"));
-            } else {
+            if (busy != null) table.add(theme.label(busy.equals(name) ? "…" : "—"));
+            else {
                 WButton remove = theme.button("remove");
                 remove.action = () -> removeFriend(name);
                 table.add(remove);
@@ -159,18 +116,14 @@ public class FriendsScreen extends WindowScreen {
     }
 
     private void initLocationsTab() {
-        if (!locationsLoaded) {
-            add(theme.label("loading…")).expandX();
-            if (!locationsLoading) loadLocations();
+        if (pending(locations, () -> fetchArray("/my/friends/locations", locations))) return;
+
+        if (!locations.error.isEmpty()) {
+            add(theme.label(locations.error)).expandX();
             return;
         }
 
-        if (!locationsError.isEmpty()) {
-            add(theme.label(locationsError)).expandX();
-            return;
-        }
-
-        if (locations.isEmpty()) {
+        if (locations.items.isEmpty()) {
             add(theme.label("no friends on a server right now")).expandX();
             return;
         }
@@ -180,19 +133,18 @@ public class FriendsScreen extends WindowScreen {
         table.add(theme.label("Server"));
         table.row();
 
-        for (JsonElement el : locations) {
+        for (JsonElement el : locations.items) {
             if (!el.isJsonObject()) continue;
             JsonObject loc = el.getAsJsonObject();
-            String name = loc.has("name") ? loc.get("name").getAsString() : "";
-            String server = loc.has("server") ? loc.get("server").getAsString() : "";
+            String name = str(loc, "name");
+            String server = str(loc, "server");
 
             table.add(theme.label(name)).expandX();
             table.add(theme.label(server)).expandX();
 
-            if (canJoinServer(server)) {
-                String address = server;
+            if (canJoin(server)) {
                 WButton join = theme.button("join");
-                join.action = () -> joinServer(address);
+                join.action = () -> join(server);
                 table.add(join);
             } else {
                 table.add(theme.label("—"));
@@ -201,97 +153,70 @@ public class FriendsScreen extends WindowScreen {
         }
     }
 
-    private void loadFriends() {
-        listLoading = true;
-        CompletableFuture.supplyAsync(() -> Api.getJson("/my/friends")).thenAccept(response -> mc.execute(() -> {
-            listLoading = false;
-            listLoaded = true;
-            String err = Api.errorFrom(response);
-            if (err != null) {
-                listError = err;
-                friends = new JsonArray();
-            } else {
-                listError = "";
-                friends = response != null ? Api.unwrapArray(response) : new JsonArray();
-            }
-            reload();
-        }));
+    private boolean pending(TabData tab, Runnable fetch) {
+        if (tab.loaded) return false;
+        add(theme.label("loading…")).expandX();
+        if (!tab.loading) fetch.run();
+        return true;
     }
 
-    private void loadLocations() {
-        locationsLoading = true;
-        CompletableFuture.supplyAsync(() -> Api.getJson("/my/friends/locations")).thenAccept(response -> mc.execute(() -> {
-            locationsLoading = false;
-            locationsLoaded = true;
-            String err = Api.errorFrom(response);
-            if (err != null) {
-                locationsError = err;
-                locations = new JsonArray();
-            } else {
-                locationsError = "";
-                locations = response != null ? Api.unwrapArray(response) : new JsonArray();
-            }
-            reload();
-        }));
+    private void fetchArray(String path, TabData tab) {
+        tab.loading = true;
+        CompletableFuture.supplyAsync(() -> Api.requestGet(path))
+            .thenAccept(r -> ui(() -> {
+                if (r.ok()) tab.ok(Api.unwrapArray(r.body()));
+                else tab.fail(r.error());
+            }))
+            .exceptionally(e -> {
+                ui(() -> tab.fail(e.getMessage()));
+                return null;
+            });
     }
 
     private void addFriend() {
         String name = nameSetting.get().trim();
         if (name.isEmpty()) return;
-
-        String self = McsdcSystem.get().getUsername();
-        if (!self.isEmpty() && name.equals(self)) {
-            listError = "cant add yourself lol";
+        if (name.equals(McsdcSystem.get().getUsername())) {
+            list.error = "cant add yourself lol";
             reload();
             return;
         }
-
-        busy = "add";
-        listError = "";
-        reload();
-
-        JsonObject body = new JsonObject();
-        body.addProperty("name", name);
-
-        CompletableFuture.supplyAsync(() -> Api.postJson("/my/friends", body)).thenAccept(response -> mc.execute(() -> {
-            busy = null;
-            String err = Api.errorFrom(response);
-            if (err != null) {
-                listError = err;
-                reload();
-                return;
-            }
-            nameSetting.set("");
-            listLoaded = false;
-            listLoading = true;
-            reload();
-        }));
+        mutate("add", "/my/friends", name, () -> nameSetting.set(""));
     }
 
     private void removeFriend(String name) {
-        busy = name;
-        listError = "";
+        mutate(name, "/my/friends/deny", name, null);
+    }
+
+    private void mutate(String mark, String path, String name, @Nullable Runnable onOk) {
+        busy = mark;
+        list.error = "";
         reload();
 
         JsonObject body = new JsonObject();
         body.addProperty("name", name);
 
-        CompletableFuture.supplyAsync(() -> Api.postJson("/my/friends/deny", body)).thenAccept(response -> mc.execute(() -> {
-            busy = null;
-            String err = Api.errorFrom(response);
-            if (err != null) {
-                listError = err;
-                reload();
-                return;
-            }
-            listLoaded = false;
-            listLoading = true;
-            reload();
-        }));
+        CompletableFuture.supplyAsync(() -> Api.requestPost(path, body))
+            .thenAccept(r -> ui(() -> {
+                busy = null;
+                if (!r.ok()) {
+                    list.error = r.error();
+                    return;
+                }
+                if (onOk != null) onOk.run();
+                list.invalidate();
+            }))
+            .exceptionally(e -> {
+                ui(() -> {
+                    busy = null;
+                    list.fail(e.getMessage());
+                });
+                return null;
+            });
     }
 
-    private void joinServer(String address) {
-        if (!canJoinServer(address)) return;
+    private void join(String address) {
+        if (!canJoin(address)) return;
         if (mc.world != null) mc.world.disconnect(Text.of(""));
         ConnectScreen.connect(
             new MultiplayerScreen(new TitleScreen()), mc,
@@ -301,21 +226,55 @@ public class FriendsScreen extends WindowScreen {
         );
     }
 
-    private static boolean canJoinServer(String server) {
-        if (server == null || server.isBlank()) return false;
-        return !server.equalsIgnoreCase("singleplayer");
+    private static void ui(Runnable action) {
+        mc.execute(() -> {
+            action.run();
+            if (mc.currentScreen instanceof FriendsScreen s) s.reload();
+        });
     }
 
-    private static String roleLabel(String role) {
-        if (role == null || role.isBlank()) return "user";
-        return switch (role) {
-            case "mod", "admin", "owner", "banned" -> role;
-            default -> "user";
-        };
+    private static boolean canJoin(String server) {
+        return !server.isBlank() && !server.equalsIgnoreCase("singleplayer");
+    }
+
+    private static String str(JsonObject o, String key) {
+        return str(o, key, "");
+    }
+
+    private static String str(JsonObject o, String key, String fallback) {
+        return o.has(key) && !o.get(key).isJsonNull() ? o.get(key).getAsString() : fallback;
     }
 
     @Override
     public void close() {
-        this.client.setScreen(parent);
+        client.setScreen(parent);
+    }
+
+    private static final class TabData {
+        boolean loading;
+        boolean loaded;
+        String error = "";
+        JsonArray items = new JsonArray();
+
+        void invalidate() {
+            loading = false;
+            loaded = false;
+            error = "";
+            items = new JsonArray();
+        }
+
+        void ok(JsonArray data) {
+            loading = false;
+            loaded = true;
+            error = "";
+            items = data;
+        }
+
+        void fail(@Nullable String message) {
+            loading = false;
+            loaded = true;
+            error = message != null && !message.isBlank() ? message : "request failed";
+            items = new JsonArray();
+        }
     }
 }
