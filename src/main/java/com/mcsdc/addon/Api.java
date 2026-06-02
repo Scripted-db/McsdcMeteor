@@ -54,24 +54,42 @@ public final class Api {
     }
 
     @Nullable
+    public static String errorFrom(@Nullable JsonObject obj) {
+        if (obj != null && obj.has("error") && obj.get("error").isJsonPrimitive()) {
+            return obj.get("error").getAsString();
+        }
+        return null;
+    }
+
+    @Nullable
     public static String errorFrom(@Nullable String body) {
         if (body == null || body.isBlank()) return "no response";
         try {
             JsonElement parsed = parse(body);
-            if (!parsed.isJsonObject()) return null;
-            JsonObject obj = parsed.getAsJsonObject();
-            if (obj.has("error") && obj.get("error").isJsonPrimitive()) {
-                return obj.get("error").getAsString();
-            }
+            if (parsed.isJsonObject()) return errorFrom(parsed.getAsJsonObject());
         } catch (Exception ignored) {}
         return null;
     }
 
-    public static boolean isAccessBanned(JsonObject data) {
-        return data.has("access")
-            && data.get("access").isJsonObject()
-            && data.getAsJsonObject("access").has("banned")
-            && data.getAsJsonObject("access").get("banned").getAsBoolean();
+    public static final String BAN_LOGIN_MSG = "token banned. appeal here: discord.gg/TrsAk3Ay5T";
+
+    public static boolean isBanError(@Nullable String err) {
+        return err != null && err.toLowerCase().contains("ban");
+    }
+
+    public static String loginFailureMessage(String apiError) {
+        return isBanError(apiError) ? BAN_LOGIN_MSG : apiError;
+    }
+
+    public static boolean isUserBanned(JsonObject data) {
+        if (data.has("access") && data.get("access").isJsonObject()) {
+            JsonObject access = data.getAsJsonObject("access");
+            if (access.has("banned") && access.get("banned").getAsBoolean()) return true;
+        }
+        if (data.has("role") && data.get("role").isJsonPrimitive() && "banned".equals(data.get("role").getAsString())) {
+            return true;
+        }
+        return data.has("perms") && !data.get("perms").isJsonNull() && data.get("perms").getAsInt() == 0;
     }
 
     public static JsonArray unwrapArray(String body) {

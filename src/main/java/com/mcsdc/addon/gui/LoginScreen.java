@@ -52,13 +52,14 @@ public class LoginScreen extends WindowScreen {
                 return;
             }
 
-            CompletableFuture.supplyAsync(() -> parseLoginResponse(token)).thenAccept(response -> {
+            CompletableFuture.supplyAsync(() -> parseLoginResponse(token)).thenAccept(result -> {
                 mc.execute(() -> {
-                    if (response == null) {
-                        add(theme.label("Invalid token."));
+                    if (result.failed()) {
+                        add(theme.label(result.error()));
                         return;
                     }
 
+                    LoginResult response = result.login();
                     McsdcSystem.get().setToken(response.sessionToken());
                     McsdcSystem.get().setUsername(response.name());
                     McsdcSystem.get().setLevel(response.perms());
@@ -70,31 +71,51 @@ public class LoginScreen extends WindowScreen {
         };
     }
 
-    @Nullable
-    private static LoginResult parseLoginResponse(String token) {
+    private static LoginParseResult parseLoginResponse(String token) {
         JsonObject body = new JsonObject();
         body.addProperty("token", token);
 
         String response = Api.postPublicJson("/auth/login", body);
-        if (response == null || response.isEmpty()) return null;
+
+        String err = Api.errorFrom(response);
+        if (err != null) return LoginParseResult.failure(Api.loginFailureMessage(err));
 
         JsonObject data;
         try {
             data = Api.unwrapObject(response);
         } catch (Exception e) {
-            return null;
+            return LoginParseResult.failure("invalid token");
         }
 
-        if (data.has("error") || !data.has("token") || !data.has("name")) return null;
+        err = Api.errorFrom(data);
+        if (err != null) return LoginParseResult.failure(Api.loginFailureMessage(err));
 
-        if (Api.isAccessBanned(data)) return null;
+        if (Api.isUserBanned(data)) return LoginParseResult.failure(Api.BAN_LOGIN_MSG);
 
-        return new LoginResult(
+        if (!data.has("token") || !data.has("name")) {
+            return LoginParseResult.failure("invalid token");
+        }
+
+        return LoginParseResult.success(new LoginResult(
             data.get("token").getAsString(),
             data.get("name").getAsString(),
             data.has("perms") ? data.get("perms").getAsInt() : Api.roleToPerms(data.get("role"))
-        );
+        ));
     }
 
     private record LoginResult(String sessionToken, String name, int perms) {}
+
+    private record LoginParseResult(@Nullable LoginResult login, @Nullable String error) {
+        static LoginParseResult success(LoginResult login) {
+            return new LoginParseResult(login, null);
+        }
+
+        static LoginParseResult failure(String message) {
+            return new LoginParseResult(null, message);
+        }
+
+        boolean failed() {
+            return error != null;
+        }
+    }
 }
