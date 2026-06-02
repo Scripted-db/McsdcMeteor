@@ -1,9 +1,8 @@
 package com.mcsdc.addon.gui;
 
-import com.mcsdc.addon.Main;
+import com.mcsdc.addon.Api;
 import com.mcsdc.addon.MultiplayerScreenUtils;
 import com.mcsdc.addon.system.FindPlayerSearchBuilder;
-import com.mcsdc.addon.system.McsdcSystem;
 import com.mcsdc.addon.system.ServerStorage;
 import com.google.gson.JsonObject;
 import meteordevelopment.meteorclient.gui.GuiThemes;
@@ -15,7 +14,6 @@ import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.settings.Settings;
 import meteordevelopment.meteorclient.settings.StringSetting;
-import meteordevelopment.meteorclient.utils.network.Http;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.screen.multiplayer.ConnectScreen;
@@ -82,7 +80,7 @@ public class FindPlayerScreen extends WindowScreen {
 
             CompletableFuture.supplyAsync(() -> {
                 JsonObject toSearch = FindPlayerSearchBuilder.create(playerSetting.get());
-                return Http.post(Main.mainEndpoint).bodyJson(toSearch).header("authorization", "Bearer " + McsdcSystem.get().getToken()).sendStringResponse().body();
+                return Api.postJson("/search/player", toSearch);
             }).thenAccept(response -> {
                 mc.execute(() -> {
                     if (response == null) {

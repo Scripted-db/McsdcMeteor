@@ -3,15 +3,12 @@ package com.mcsdc.addon.gui;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.mcsdc.addon.Main;
-import com.mcsdc.addon.system.McsdcSystem;
+import com.mcsdc.addon.Api;
 import com.mcsdc.addon.util.TicketIDGenerator;
 import meteordevelopment.meteorclient.gui.GuiThemes;
 import meteordevelopment.meteorclient.gui.WindowScreen;
 import meteordevelopment.meteorclient.gui.widgets.containers.WTable;
 import meteordevelopment.meteorclient.systems.accounts.types.CrackedAccount;
-import meteordevelopment.meteorclient.utils.network.Http;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.screen.multiplayer.ConnectScreen;
 import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
@@ -20,7 +17,6 @@ import net.minecraft.client.network.ServerInfo;
 import net.minecraft.client.network.ServerInfo.ServerType;
 import net.minecraft.text.Text;
 
-import java.net.http.HttpResponse;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -40,34 +36,17 @@ public class ServerInfoScreen extends WindowScreen {
     @Override
     public void initWidgets() {
         CompletableFuture.supplyAsync(() -> {
-            JsonObject searchJson = new JsonObject();
-            JsonObject addressJson = new JsonObject();
-            addressJson.addProperty("address", this.ip);
-            searchJson.add("search", addressJson);
-
-            HttpResponse<String> response = Http.post(
-                    Main.mainEndpoint)
-                    .bodyJson(searchJson)
-                    .header(
-                            "authorization",
-                            "Bearer " + McsdcSystem.get().getToken())
-                    .sendStringResponse();
-
-            return response != null ? response.body() : null;
-        }).thenAccept(response -> {
-            if (response == null || response.isEmpty()) {
+            String response = Api.postJson("/search/query", Api.addressBody(this.ip));
+            if (response == null || response.isEmpty()) return null;
+            JsonObject server = Api.normalizeServer(Api.unwrapObject(response));
+            return server.has("error") ? null : server;
+        }).thenAccept(jsonObject -> {
+            if (jsonObject == null) {
                 mc.execute(() -> add(theme.label("Not Valid")));
                 return;
             }
 
             mc.execute(() -> {
-                JsonObject jsonObject = JsonParser.parseString(response).getAsJsonObject();
-
-                if (jsonObject.has("error")) {
-                    add(theme.label("Not Valid"));
-                    return;
-                }
-
                 WTable table = add(theme.table()).widget();
 
                 table.add(theme.horizontalSeparator("Info")).expandX().widget();
@@ -156,7 +135,9 @@ public class ServerInfoScreen extends WindowScreen {
                 accounts.add(theme.horizontalSeparator("Historical")).expandX().widget();
                 accounts.row();
 
-                JsonArray array = JsonParser.parseString(response).getAsJsonObject().getAsJsonArray("historical");
+                JsonArray array = jsonObject.has("historical")
+                    ? jsonObject.getAsJsonArray("historical")
+                    : new JsonArray();
                 List<PlayerInfo> players = new ArrayList<>();
                 for (JsonElement jsonElement : array) {
                     String name;

@@ -1,6 +1,7 @@
 package com.mcsdc.addon.gui;
 
 import com.google.gson.JsonObject;
+import com.mcsdc.addon.Api;
 import com.mcsdc.addon.Main;
 import com.mcsdc.addon.MultiplayerScreenUtils;
 import com.mcsdc.addon.system.MOTD;
@@ -14,7 +15,6 @@ import meteordevelopment.meteorclient.gui.widgets.containers.WHorizontalList;
 import meteordevelopment.meteorclient.gui.widgets.containers.WTable;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WButton;
 import meteordevelopment.meteorclient.settings.*;
-import meteordevelopment.meteorclient.utils.network.Http;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.screen.multiplayer.ConnectScreen;
@@ -287,10 +287,10 @@ public class FindNewServersScreen extends WindowScreen {
                 ServerSearchBuilder.Flags flags = new ServerSearchBuilder.Flags(visitedSetting.get().bool, griefedSetting.get().bool, moddedSetting.get().bool, savedSetting.get().bool, whitelistSetting.get().bool, activeSetting.get().bool, crackedSetting.get().bool);
                 ServerSearchBuilder.Search searchString = new ServerSearchBuilder.Search(versionString, flags, extra);
 
-                JsonObject jsonString = ServerSearchBuilder.createJson(searchString);
+                JsonObject jsonString = ServerSearchBuilder.createFilter(searchString);
                 Main.LOG.info(jsonString.toString());
 
-                return Http.post(Main.mainEndpoint).bodyString(jsonString.toString()).header("authorization", "Bearer " + McsdcSystem.get().getToken()).sendString();
+                return Api.postJson("/search/filter", jsonString);
             }).thenAccept(response -> {
                 mc.execute(() -> {
                     searching = false;

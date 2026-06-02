@@ -1,8 +1,7 @@
 package com.mcsdc.addon.gui;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.mcsdc.addon.Main;
+import com.mcsdc.addon.Api;
 import com.mcsdc.addon.system.McsdcSystem;
 import meteordevelopment.meteorclient.gui.GuiThemes;
 import meteordevelopment.meteorclient.gui.WindowScreen;
@@ -11,9 +10,8 @@ import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.settings.SettingGroup;
 import meteordevelopment.meteorclient.settings.Settings;
 import meteordevelopment.meteorclient.settings.StringSetting;
-import meteordevelopment.meteorclient.utils.network.Http;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static meteordevelopment.meteorclient.MeteorClient.mc;
@@ -48,39 +46,22 @@ public class LoginScreen extends WindowScreen {
         add(theme.button("Submit")).expandX().widget().action = () -> {
             reload();
 
-            if (tokenSetting.get().isEmpty()){
+            String token = tokenSetting.get().trim();
+            if (token.isEmpty()){
                 add(theme.label("Please enter a token to login."));
                 return;
             }
 
-            CompletableFuture.supplyAsync(() -> {
-                JsonObject authJson = new JsonObject();
-                JsonObject loginJson = new JsonObject();
-                loginJson.addProperty("login", tokenSetting.get());
-                authJson.add("auth", loginJson);
-
-                String response = Http.post(Main.mainEndpoint).bodyJson(authJson).sendString();
-                if (response == null){
-                    return null;
-                }
-
-                JsonObject jsonObject = JsonParser.parseString(response).getAsJsonObject();
-                JsonObject data = jsonObject.getAsJsonObject("data");
-
-                String name = data.get("name").getAsString();
-                int perms = data.get("perms").getAsInt();
-
-                return Map.entry(name, perms);
-            }).thenAccept(response -> {
+            CompletableFuture.supplyAsync(() -> parseLoginResponse(token)).thenAccept(response -> {
                 mc.execute(() -> {
                     if (response == null) {
                         add(theme.label("Invalid token."));
                         return;
                     }
 
-                    McsdcSystem.get().setToken(tokenSetting.get());
-                    McsdcSystem.get().setUsername(response.getKey());
-                    McsdcSystem.get().setLevel(response.getValue());
+                    McsdcSystem.get().setToken(response.sessionToken());
+                    McsdcSystem.get().setUsername(response.name());
+                    McsdcSystem.get().setLevel(response.perms());
 
                     mc.setScreen(this.parent);
                     this.parent.reload();
@@ -88,4 +69,30 @@ public class LoginScreen extends WindowScreen {
             });
         };
     }
+
+    @Nullable
+    private static LoginResult parseLoginResponse(String token) {
+        JsonObject body = new JsonObject();
+        body.addProperty("token", token);
+
+        String response = Api.postPublicJson("/auth/login", body);
+        if (response == null || response.isEmpty()) return null;
+
+        JsonObject data;
+        try {
+            data = Api.unwrapObject(response);
+        } catch (Exception e) {
+            return null;
+        }
+
+        if (data.has("error") || !data.has("token") || !data.has("name")) return null;
+
+        return new LoginResult(
+            data.get("token").getAsString(),
+            data.get("name").getAsString(),
+            data.has("perms") ? data.get("perms").getAsInt() : Api.roleToPerms(data.get("role"))
+        );
+    }
+
+    private record LoginResult(String sessionToken, String name, int perms) {}
 }

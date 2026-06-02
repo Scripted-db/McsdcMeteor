@@ -1,16 +1,12 @@
 package com.mcsdc.addon.gui;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.mcsdc.addon.Main;
-import com.mcsdc.addon.system.McsdcSystem;
+import com.mcsdc.addon.Api;
 import meteordevelopment.meteorclient.gui.GuiThemes;
 import meteordevelopment.meteorclient.gui.WindowScreen;
 import meteordevelopment.meteorclient.gui.widgets.containers.WTable;
 import meteordevelopment.meteorclient.settings.*;
-import meteordevelopment.meteorclient.utils.network.Http;
 
-import java.net.http.HttpResponse;
 import java.util.concurrent.CompletableFuture;
 
 import static meteordevelopment.meteorclient.MeteorClient.mc;
@@ -79,48 +75,31 @@ public class EditFlagsScreen extends WindowScreen {
     @Override
     public void initWidgets() {
         CompletableFuture.supplyAsync(() -> {
-            JsonObject searchJson = new JsonObject();
-            JsonObject addressJson = new JsonObject();
-            addressJson.addProperty("address", this.ip);
-            searchJson.add("search", addressJson);
-
-            HttpResponse<String> response = Http.post(
-                Main.mainEndpoint
-            )
-                .bodyJson(searchJson)
-                .header(
-                    "authorization",
-                    "Bearer " + McsdcSystem.get().getToken()
-                )
-                .sendStringResponse();
-
-            return response != null ? response.body() : null;
-        }).thenAccept(response -> {
-            if (response == null || response.isEmpty()){
+            String response = Api.postJson("/search/query", Api.addressBody(this.ip));
+            if (response == null || response.isEmpty()) return null;
+            JsonObject server = Api.normalizeServer(Api.unwrapObject(response));
+            return server.has("error") ? null : server;
+        }).thenAccept(server -> {
+            if (server == null) {
                 mc.execute(() -> add(theme.label("Not Valid")));
                 return;
             }
 
             mc.execute(() -> {
-                JsonObject jsonObject = JsonParser.parseString(response).getAsJsonObject();
-
-                if (jsonObject.has("error")) {
-                    add(theme.label("Not Valid"));
-                    return;
-                }
-
                 WTable table = add(theme.table()).widget();
                 table.minWidth = 300;
 
-                if (jsonObject.has("notes")) {
-                    notesSetting.set(jsonObject.get("notes").getAsString());
+                if (server.has("notes")) {
+                    notesSetting.set(server.get("notes").getAsString());
                 }
-                griefedSetting.set(jsonObject.get("status").getAsJsonObject().get("griefed").getAsBoolean());
-                savedSetting.set(jsonObject.get("status").getAsJsonObject().get("save_for_later").getAsBoolean());
-                visitedSetting.set(jsonObject.get("status").getAsJsonObject().get("visited").getAsBoolean());
-                moddedSetting.set(jsonObject.get("status").getAsJsonObject().get("modded").getAsBoolean());
-                whitelistSetting.set(jsonObject.get("status").getAsJsonObject().get("whitelist").getAsBoolean());
-                bannedSetting.set(jsonObject.get("status").getAsJsonObject().get("banned").getAsBoolean());
+
+                JsonObject status = server.getAsJsonObject("status");
+                griefedSetting.set(flag(status, "griefed"));
+                savedSetting.set(flag(status, "save_for_later"));
+                visitedSetting.set(flag(status, "visited"));
+                moddedSetting.set(flag(status, "modded"));
+                whitelistSetting.set(flag(status, "whitelist"));
+                bannedSetting.set(flag(status, "banned"));
                 table.add(theme.settings(settings)).expandX();
                 table.row();
                 table.add(theme.button("Save")).expandX().widget().action = this::setMarked;
@@ -130,29 +109,21 @@ public class EditFlagsScreen extends WindowScreen {
     }
 
     public void setMarked(){
-        JsonObject mainJson = new JsonObject();
-        JsonObject innerJson = new JsonObject();
+        JsonObject body = new JsonObject();
         JsonObject flagJson = new JsonObject();
 
-        flagJson.addProperty("visited", visitedSetting.get());
         flagJson.addProperty("griefed", griefedSetting.get());
         flagJson.addProperty("modded", moddedSetting.get());
-        flagJson.addProperty("save_for_later", savedSetting.get());
         flagJson.addProperty("whitelist", whitelistSetting.get());
-        flagJson.addProperty("banned", bannedSetting.get());
 
-        innerJson.addProperty("address", this.ip);
-        innerJson.addProperty("notes", notesSetting.get());
-        innerJson.add("flags", flagJson);
-        innerJson.addProperty("joined", true);
-        mainJson.add("update", innerJson);
+        body.addProperty("address", ip);
+        body.addProperty("note", notesSetting.get());
+        body.add("flags", flagJson);
 
-        CompletableFuture.runAsync(() -> {
-            Http.post(Main.mainEndpoint).bodyJson(mainJson).header(
-                    "authorization",
-                    "Bearer " + McsdcSystem.get().getToken()
-                )
-                .sendString();
-        });
+        CompletableFuture.runAsync(() -> Api.post("/update/server", body).send());
+    }
+
+    private static boolean flag(JsonObject status, String key) {
+        return status.has(key) && status.get(key).getAsBoolean();
     }
 }

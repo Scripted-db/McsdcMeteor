@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
-import java.util.Map;
 
 public class ServerSearchBuilder {
     public static class Version {
@@ -42,25 +41,6 @@ public class ServerSearchBuilder {
             this.active = active;
             this.cracked = cracked;
         }
-
-        public JsonObject toJsonObject() {
-            JsonObject jsonObject = new JsonObject();
-            if (visited != null)
-                jsonObject.addProperty("visited", visited);
-            if (griefed != null)
-                jsonObject.addProperty("griefed", griefed);
-            if (modded != null)
-                jsonObject.addProperty("modded", modded);
-            if (saved != null)
-                jsonObject.addProperty("saved", saved);
-            if (whitelist != null)
-                jsonObject.addProperty("whitelist", whitelist);
-            if (active != null)
-                jsonObject.addProperty("active", active);
-            if (cracked != null)
-                jsonObject.addProperty("cracked", cracked);
-            return jsonObject;
-        }
     }
 
     public static class Extra {
@@ -71,26 +51,6 @@ public class ServerSearchBuilder {
             this.hasHistory = hasHistory;
             this.hasNotes = hasNotes;
             this.motds = motds;
-        }
-
-        public JsonObject toJsonObject() {
-            JsonObject jsonObject = new JsonObject();
-            JsonObject motdJsonObject = new JsonObject();
-            if (hasHistory != null)
-                jsonObject.addProperty("has_history", hasHistory);
-            if (hasNotes != null)
-                jsonObject.addProperty("has_notes", hasNotes);
-            if (motds != null) {
-                for (Map.Entry<MOTD, Boolean> entry : motds.entrySet()) {
-                    if (entry.getValue() != null) {
-                        motdJsonObject.addProperty(entry.getKey().getName(), entry.getValue());
-                    }
-                }
-
-                jsonObject.add("motd", motdJsonObject);
-            }
-
-            return jsonObject;
         }
     }
 
@@ -106,23 +66,29 @@ public class ServerSearchBuilder {
         }
     }
 
-    public static JsonObject createJson(Search search) {
-        JsonObject rootJson = new JsonObject(), searchJson = new JsonObject();
+    public static JsonObject createFilter(Search search) {
+        JsonObject filters = new JsonObject();
+
+        if (search.flags != null) {
+            addBool(filters, "active", search.flags.active);
+            addBool(filters, "cracked", search.flags.cracked);
+            addBool(filters, "griefed", search.flags.griefed);
+            addBool(filters, "modded", search.flags.modded);
+            addBool(filters, "whitelist", search.flags.whitelist);
+            addBool(filters, "has_note", search.flags.saved);
+        }
 
         if (search.version != null) {
             JsonElement versionElement = search.version.toJson();
-            searchJson.add("version", versionElement);
-        } else {
-            searchJson.add("version", null);
+            if (versionElement != null) filters.add("version", versionElement);
         }
 
-        JsonObject extraJson = search.extra != null ? search.extra.toJsonObject() : new JsonObject();
-        searchJson.add("extra", extraJson);
+        if (filters.size() == 0) filters.addProperty("active", true);
 
-        JsonObject flagsJson = search.flags != null ? search.flags.toJsonObject() : new JsonObject();
-        searchJson.add("flags", flagsJson);
+        return filters;
+    }
 
-        rootJson.add("search", searchJson);
-        return rootJson;
+    private static void addBool(JsonObject obj, String key, Boolean value) {
+        if (value != null) obj.addProperty(key, value);
     }
 }
