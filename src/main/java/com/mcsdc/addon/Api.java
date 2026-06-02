@@ -20,6 +20,13 @@ public final class Api {
         return Main.apiBase + (path.startsWith("/") ? path : "/" + path);
     }
 
+    public static Http.Request get(String path) {
+        Http.Request req = Http.get(url(path));
+        String token = McsdcSystem.get().getToken();
+        if (!token.isEmpty()) req.header("Authorization", "Bearer " + token);
+        return req;
+    }
+
     public static Http.Request post(String path, @Nullable JsonObject body) {
         Http.Request req = Http.post(url(path));
         if (body != null) req.bodyJson(body);
@@ -35,6 +42,11 @@ public final class Api {
     @Nullable
     public static String responseBody(@Nullable java.net.http.HttpResponse<String> response) {
         return response != null ? response.body() : null;
+    }
+
+    @Nullable
+    public static String getJson(String path) {
+        return responseBody(get(path).sendStringResponse());
     }
 
     @Nullable
