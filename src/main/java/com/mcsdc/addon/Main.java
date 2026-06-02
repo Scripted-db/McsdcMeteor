@@ -4,7 +4,6 @@ import com.mcsdc.addon.commands.TicketIDCommand;
 import com.mcsdc.addon.system.LocationReporter;
 import com.mcsdc.addon.util.TicketIDGenerator;
 import com.mojang.logging.LogUtils;
-import meteordevelopment.meteorclient.addons.GithubRepo;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
 import meteordevelopment.meteorclient.commands.Commands;
 import meteordevelopment.meteorclient.utils.misc.MeteorStarscript;
@@ -31,8 +30,8 @@ public class Main extends MeteorAddon {
     }
 
     @Override
-    public GithubRepo getRepo() {
-        return new GithubRepo("Nxyi", "McsdcMeteor");
+    public String getWebsite() {
+        return "https://codeberg.org/Syu/McsdcMeteor";
     }
 
     public static String getTicketID(){

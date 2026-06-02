@@ -9,7 +9,8 @@
     "Scripted"
   ],
   "contact": {
-    "repo": ""
+    "homepage": "https://codeberg.org/Syu/McsdcMeteor",
+    "sources": "https://codeberg.org/Syu/McsdcMeteor"
   },
   "icon": "assets/icon.png",
   "environment": "client",
