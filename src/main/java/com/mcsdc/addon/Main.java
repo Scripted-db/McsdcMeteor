@@ -1,6 +1,7 @@
 package com.mcsdc.addon;
 
 import com.mcsdc.addon.commands.TicketIDCommand;
+import com.mcsdc.addon.system.LocationReporter;
 import com.mcsdc.addon.util.TicketIDGenerator;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.addons.GithubRepo;
@@ -20,6 +21,7 @@ public class Main extends MeteorAddon {
     public void onInitialize() {
         LOG.info("Initializing mcsdc.");
         Commands.add(new TicketIDCommand());
+        LocationReporter.init();
         MeteorStarscript.ss.set("ticketID", () -> Value.string(getTicketID()));
     }
 
