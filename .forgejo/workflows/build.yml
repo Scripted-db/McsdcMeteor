@@ -1,48 +1,57 @@
-name: Release
+name: Build
 
 on:
     push:
         branches: [master]
+        tags: ["v*"]
     pull_request:
         branches: [master]
 
 jobs:
     build:
-        runs-on: ubuntu-latest
+        runs-on: codeberg-medium
+        timeout-minutes: 10
         steps:
             - name: Checkout
-              uses: actions/checkout@v4
+              uses: https://github.com/actions/checkout@v4
               with:
                   persist-credentials: false
 
             - name: Set up JDK 21
-              uses: actions/setup-java@v4
+              uses: https://github.com/actions/setup-java@v4
               with:
                   java-version: "21"
                   distribution: "temurin"
+
             - name: Get mod_version from gradle.properties
               id: getModVersion
               run: |
                   MOD_VERSION=$(grep "^mod_version=" gradle.properties | cut -d'=' -f2)
                   echo "mod_version=$MOD_VERSION" >> $GITHUB_OUTPUT
+
             - name: Get minecraft_version from gradle.properties
               id: getMinecraftVersion
               run: |
                   MINECRAFT_VERSION=$(grep "^minecraft_version=" gradle.properties | cut -d'=' -f2)
                   echo "minecraft_version=$MINECRAFT_VERSION" >> $GITHUB_OUTPUT
+
             - name: Setup Gradle
-              uses: gradle/actions/setup-gradle@v4
+              uses: https://github.com/gradle/actions/setup-gradle@v4
 
             - name: Grant execute permission for gradlew
-              run: chmod -R +x .
+              run: chmod +x gradlew
 
             - name: Build with Gradle
               run: ./gradlew build
 
             - name: Release
-              uses: softprops/action-gh-release@v2
+              if: github.ref_type == 'tag'
+              uses: https://gitea.com/bozemanpass/action-gh-release@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  GITHUB_API_URL: ${{ github.api_url }}
               with:
-                  tag_name: ${{ github.run_id }}
-                  name: Release Mcsdc v${{steps.getModVersion.outputs.mod_version}}+${{github.sha}}
+                  tag_name: ${{ github.ref_name }}
+                  name: Mcsdc ${{ github.ref_name }}
                   files: |
-                      build/libs/Mcsdc-${{steps.getModVersion.outputs.mod_version}}-${{steps.getMinecraftVersion.outputs.minecraft_version}}.jar
+                      build/libs/Mcsdc-${{ steps.getModVersion.outputs.mod_version }}-${{ steps.getMinecraftVersion.outputs.minecraft_version }}.jar
