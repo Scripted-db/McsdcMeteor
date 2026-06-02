@@ -83,8 +83,9 @@ public class FindPlayerScreen extends WindowScreen {
                 return Api.postJson("/search/player", toSearch);
             }).thenAccept(response -> {
                 mc.execute(() -> {
-                    if (response == null) {
-                        add(theme.label("No servers found."));
+                    String apiError = Api.errorFrom(response);
+                    if (apiError != null) {
+                        add(theme.label(apiError));
                         return;
                     }
 

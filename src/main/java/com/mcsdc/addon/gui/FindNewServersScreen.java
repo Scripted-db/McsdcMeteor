@@ -296,25 +296,31 @@ public class FindNewServersScreen extends WindowScreen {
                     searching = false;
                     reload();
 
-                    if (response == null) {
-                        add(theme.label("No servers found.")).expandX().widget();
+                    String apiError = Api.errorFrom(response);
+                    if (apiError != null) {
+                        add(theme.label(apiError)).expandX().widget();
                         return;
                     }
 
-                    String res = response;
-                    if (res.endsWith(",]")){
-                        res = res.substring(0, res.length() - 2) + "]";
+                    String json = response;
+                    if (json.endsWith(",]")) {
+                        json = json.substring(0, json.length() - 2) + "]";
                     }
 
                     try {
-                        extractedServers = ServerStorage.fromJsonArray(res);
+                        extractedServers = ServerStorage.fromJsonArray(json);
                     } catch (Exception e) {
                         add(theme.label("Error parsing response.")).expandX().widget();
                         return;
                     }
 
-                    if (hideOfflineSetting.get()){
-                        extractedServers.removeIf(server -> server.lastScanned() - server.lastSeen() > 40 * 60 * 1000);
+                    if (hideOfflineSetting.get()) {
+                        extractedServers.removeIf(server -> {
+                            Long scanned = server.lastScanned();
+                            Long seen = server.lastSeen();
+                            if (scanned == null || seen == null) return false;
+                            return scanned - seen > 40 * 60 * 1000;
+                        });
                     }
 
                     if (extractedServers.isEmpty()){

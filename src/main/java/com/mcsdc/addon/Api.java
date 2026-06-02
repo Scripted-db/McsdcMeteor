@@ -12,6 +12,7 @@ public final class Api {
     private static final String[] STATUS_KEYS = {
         "visited", "griefed", "modded", "whitelist", "save_for_later", "banned", "cracked"
     };
+    private static final String[] ARRAY_KEYS = { "servers", "results", "rows", "list", "items" };
 
     private Api() {}
 
@@ -52,8 +53,29 @@ public final class Api {
         return body;
     }
 
+    @Nullable
+    public static String errorFrom(@Nullable String body) {
+        if (body == null || body.isBlank()) return "no response";
+        try {
+            JsonElement parsed = parse(body);
+            if (!parsed.isJsonObject()) return null;
+            JsonObject obj = parsed.getAsJsonObject();
+            if (obj.has("error") && obj.get("error").isJsonPrimitive()) {
+                return obj.get("error").getAsString();
+            }
+        } catch (Exception ignored) {}
+        return null;
+    }
+
+    public static boolean isAccessBanned(JsonObject data) {
+        return data.has("access")
+            && data.get("access").isJsonObject()
+            && data.getAsJsonObject("access").has("banned")
+            && data.getAsJsonObject("access").get("banned").getAsBoolean();
+    }
+
     public static JsonArray unwrapArray(String body) {
-        JsonElement parsed = JsonParser.parseString(body);
+        JsonElement parsed = parse(body);
         if (parsed.isJsonArray()) return parsed.getAsJsonArray();
         if (!parsed.isJsonObject()) return new JsonArray();
 
@@ -61,14 +83,14 @@ public final class Api {
         if (root.has("data") && root.get("data").isJsonArray()) {
             return root.getAsJsonArray("data");
         }
-        for (String key : new String[] { "servers", "results", "rows", "list", "items" }) {
+        for (String key : ARRAY_KEYS) {
             if (root.has(key) && root.get(key).isJsonArray()) return root.getAsJsonArray(key);
         }
         return new JsonArray();
     }
 
     public static JsonObject unwrapObject(String body) {
-        JsonElement parsed = JsonParser.parseString(body);
+        JsonElement parsed = parse(body);
         if (!parsed.isJsonObject()) return new JsonObject();
 
         JsonObject root = parsed.getAsJsonObject();
@@ -91,6 +113,14 @@ public final class Api {
         if (s.has("history") && !s.has("historical")) {
             s.add("historical", s.get("history"));
         }
+        if (s.has("historical") && s.get("historical").isJsonArray()) {
+            for (JsonElement el : s.getAsJsonArray("historical")) {
+                if (!el.isJsonObject()) continue;
+                JsonObject player = el.getAsJsonObject();
+                patchTime(player, "last_seen");
+                patchTime(player, "discovered");
+            }
+        }
 
         patchTime(s, "last_seen_online");
         patchTime(s, "last_scanned");
@@ -109,8 +139,8 @@ public final class Api {
             ? s.getAsJsonObject("status")
             : new JsonObject();
 
-        for (String key : STATUS_KEYS) mergeFlag(status, s, key);
         for (String key : STATUS_KEYS) {
+            mergeFlag(status, s, key);
             if (!status.has(key)) status.addProperty(key, false);
         }
 
@@ -185,5 +215,9 @@ public final class Api {
     private static void patchTime(JsonObject o, String key) {
         if (!o.has(key) || o.get(key).isJsonNull()) return;
         o.addProperty(key, timeToMs(o, key));
+    }
+
+    private static JsonElement parse(String body) {
+        return JsonParser.parseString(body);
     }
 }

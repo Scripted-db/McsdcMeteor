@@ -87,6 +87,8 @@ public class LoginScreen extends WindowScreen {
 
         if (data.has("error") || !data.has("token") || !data.has("name")) return null;
 
+        if (Api.isAccessBanned(data)) return null;
+
         return new LoginResult(
             data.get("token").getAsString(),
             data.get("name").getAsString(),
