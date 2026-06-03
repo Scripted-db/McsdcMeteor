@@ -31,6 +31,8 @@ public final class ServerListActions {
     }
 
     public static void setActive(boolean active, ButtonWidget... buttons) {
-        for (ButtonWidget button : buttons) button.active = active;
+        for (ButtonWidget button : buttons) {
+            if (button != null) button.active = active;
+        }
     }
 }

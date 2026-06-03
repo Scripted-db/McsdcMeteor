@@ -51,8 +51,6 @@ public class McsdcBrowseScreen extends McsdcParentScreen {
         int listH = bottom - top;
 
         serverList = new McsdcServerListWidget(listX, top, listW, listH);
-        serverList.setOnSelectionChanged(this::updateActionButtons);
-        if (!state.results.isEmpty()) serverList.setServers(state.results);
         addDrawableChild(serverList);
 
         int fx = margin;
@@ -140,6 +138,8 @@ public class McsdcBrowseScreen extends McsdcParentScreen {
         addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> close())
             .dimensions(width - 76, height - 28, 60, 20).build());
 
+        serverList.setOnSelectionChanged(this::updateActionButtons);
+        if (!state.results.isEmpty()) serverList.setServers(state.results);
         updateActionButtons();
     }
 
@@ -255,11 +255,12 @@ public class McsdcBrowseScreen extends McsdcParentScreen {
     }
 
     private void updateActionButtons() {
+        if (joinBtn == null) return;
         boolean sel = serverList.getSelectedServer() != null;
         ServerListActions.setActive(sel, joinBtn, addBtn, infoBtn);
         boolean hasResults = !state.results.isEmpty();
-        addAllBtn.active = hasResults;
-        shuffleBtn.active = hasResults;
+        if (addAllBtn != null) addAllBtn.active = hasResults;
+        if (shuffleBtn != null) shuffleBtn.active = hasResults;
     }
 
     @Override

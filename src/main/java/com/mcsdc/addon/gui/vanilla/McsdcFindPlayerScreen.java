@@ -58,6 +58,7 @@ public class McsdcFindPlayerScreen extends McsdcParentScreen {
         addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> close())
             .dimensions(width - 60, height - 28, 44, 20).build());
 
+        serverList.setOnSelectionChanged(this::updateButtons);
         updateButtons();
     }
 
@@ -91,9 +92,10 @@ public class McsdcFindPlayerScreen extends McsdcParentScreen {
     }
 
     private void updateButtons() {
+        if (joinBtn == null) return;
         boolean sel = serverList.getSelectedServer() != null;
         ServerListActions.setActive(sel, joinBtn, addBtn, infoBtn);
-        addAllBtn.active = !results.isEmpty();
+        if (addAllBtn != null) addAllBtn.active = !results.isEmpty();
     }
 
     @Override

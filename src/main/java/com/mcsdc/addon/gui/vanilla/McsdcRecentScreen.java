@@ -30,8 +30,6 @@ public class McsdcRecentScreen extends McsdcParentScreen {
         int top = 36;
         int bottom = height - 32;
         serverList = new McsdcServerListWidget(16, top, width - 32, bottom - top);
-        serverList.setOnSelectionChanged(this::updateButtons);
-        serverList.setServers(servers);
         addDrawableChild(serverList);
 
         addDrawableChild(ButtonWidget.builder(Text.literal("Clear all"), b -> {
@@ -52,6 +50,8 @@ public class McsdcRecentScreen extends McsdcParentScreen {
         addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> close())
             .dimensions(width - 60, height - 28, 44, 20).build());
 
+        serverList.setOnSelectionChanged(this::updateButtons);
+        serverList.setServers(servers);
         updateButtons();
     }
 
@@ -64,6 +64,7 @@ public class McsdcRecentScreen extends McsdcParentScreen {
     }
 
     private void updateButtons() {
+        if (joinBtn == null) return;
         ServerListActions.setActive(serverList.getSelectedServer() != null, joinBtn, addBtn, infoBtn, removeBtn);
     }
 
