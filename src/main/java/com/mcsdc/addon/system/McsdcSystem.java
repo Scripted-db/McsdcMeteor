@@ -58,10 +58,6 @@ public class McsdcSystem extends System<McsdcSystem> {
         return new ArrayList<>(recentServers.values());
     }
 
-    public ServerStorage getRecentServerWithIp(String ip) {
-        return recentServers.get(ip);
-    }
-
     public void addRecentServer(ServerStorage server) {
         recentServers.remove(server.ip());
         recentServers.put(server.ip(), server);
