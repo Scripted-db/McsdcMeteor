@@ -9,6 +9,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public record ServerStorage(String ip, String version, @Nullable Long lastScanned, @Nullable Long lastSeen) {
+    private static final long STALE_MS = 40 * 60 * 1000L;
+
+    public boolean isStale() {
+        if (lastScanned == null || lastSeen == null) return false;
+        return lastScanned - lastSeen > STALE_MS;
+    }
 
     public static List<ServerStorage> fromJsonArray(String jsonResponse) {
         List<ServerStorage> list = new ArrayList<>();
