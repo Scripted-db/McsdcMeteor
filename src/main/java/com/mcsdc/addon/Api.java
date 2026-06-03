@@ -127,6 +127,14 @@ public final class Api {
         return null;
     }
 
+    public static String jsonString(JsonObject o, String key) {
+        return jsonString(o, key, "");
+    }
+
+    public static String jsonString(JsonObject o, String key, String fallback) {
+        return o.has(key) && !o.get(key).isJsonNull() ? o.get(key).getAsString() : fallback;
+    }
+
     public static final String BAN_LOGIN_MSG = "token banned. appeal here: discord.gg/TrsAk3Ay5T";
 
     public static boolean isBanError(@Nullable String err) {
