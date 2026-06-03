@@ -27,10 +27,10 @@ public abstract class MultiplayerScreenMixin extends Screen {
     private void onInit(CallbackInfo info) {
         this.addDrawableChild(
             new ButtonWidget.Builder(
-                Text.literal("Mcsdc"),
+                Text.literal("MCSDC"),
                 onPress -> {
                     if (this.client == null) return;
-                    this.client.setScreen(new McsdcScreen((MultiplayerScreen) (Object) this));
+                    McsdcScreen.open((Screen) (Object) this);
                 }
             )
                 .position(150, 3)
@@ -45,7 +45,6 @@ public abstract class MultiplayerScreenMixin extends Screen {
                     if (this.client == null) return;
                     MultiplayerServerListWidget.Entry entry = this.serverListWidget.getSelectedOrNull();
                     if (entry != null) {
-                        if (this.client == null) return;
                         this.client.setScreen(new ServerInfoScreen(((MultiplayerServerListWidget.ServerEntry) entry).getServer().address));
                     }
                 }
