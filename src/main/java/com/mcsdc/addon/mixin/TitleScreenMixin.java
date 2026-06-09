@@ -1,10 +1,10 @@
 package com.mcsdc.addon.mixin;
 
 import com.mcsdc.addon.gui.McsdcScreen;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.TitleScreen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
@@ -15,14 +15,14 @@ public abstract class TitleScreenMixin extends Screen {
         super(null);
     }
 
-    @ModifyVariable(method = "addNormalWidgets", at = @At(value = "CONSTANT", args = "stringValue=menu.online"), ordinal = 0)
-    private int mcsdc$insertButton(int currentY, int y, int spacingY) {
-        int mcsdcY = currentY + spacingY;
-        this.addDrawableChild(
-            ButtonWidget.builder(Text.literal("MCSDC"), btn -> {
-                if (this.client == null) return;
+    @ModifyVariable(method = "createNormalMenuOptions", at = @At(value = "CONSTANT", args = "stringValue=menu.online"), ordinal = 0)
+    private int mcsdc$insertButton(int currentY, int topPos, int spacing) {
+        int mcsdcY = currentY + spacing;
+        this.addRenderableWidget(
+            Button.builder(Component.literal("MCSDC"), btn -> {
+                if (this.minecraft == null) return;
                 McsdcScreen.open((Screen) (Object) this);
-            }).dimensions(this.width / 2 - 100, mcsdcY, 200, 20).build()
+            }).bounds(this.width / 2 - 100, mcsdcY, 200, 20).build()
         );
         return mcsdcY;
     }

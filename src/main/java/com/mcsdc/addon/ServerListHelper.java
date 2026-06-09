@@ -1,9 +1,9 @@
 package com.mcsdc.addon;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
-import net.minecraft.client.network.ServerInfo;
-import net.minecraft.client.option.ServerList;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.multiplayer.ServerList;
 
 public final class ServerListHelper {
     private static final String MCSdc_PREFIX = "Mcsdc";
@@ -11,11 +11,11 @@ public final class ServerListHelper {
     private ServerListHelper() {}
 
     public static ServerList load() {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         ServerList list = openList(mc);
         if (list == null) {
             list = new ServerList(mc);
-            list.loadFile();
+            list.load();
         }
         return list;
     }
@@ -39,25 +39,25 @@ public final class ServerListHelper {
     }
 
     public static void save(ServerList list) {
-        list.saveFile();
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.currentScreen instanceof MultiplayerScreen mp) {
+        list.save();
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.screen instanceof JoinMultiplayerScreen mp) {
             MultiplayerScreenUtils.reload(mp);
         }
     }
 
-    private static ServerList openList(MinecraftClient mc) {
-        if (mc.currentScreen instanceof MultiplayerScreen mp) {
-            return mp.getServerList();
+    private static ServerList openList(Minecraft mc) {
+        if (mc.screen instanceof JoinMultiplayerScreen mp) {
+            return mp.getServers();
         }
         return null;
     }
 
-    private static boolean isMcsdcEntry(ServerInfo info) {
+    private static boolean isMcsdcEntry(ServerData info) {
         return info.name.startsWith(MCSdc_PREFIX);
     }
 
-    private static ServerInfo mcsdcServer(String ip) {
-        return new ServerInfo(MCSdc_PREFIX + " " + ip, ip, ServerInfo.ServerType.OTHER);
+    private static ServerData mcsdcServer(String ip) {
+        return new ServerData(MCSdc_PREFIX + " " + ip, ip, ServerData.Type.OTHER);
     }
 }

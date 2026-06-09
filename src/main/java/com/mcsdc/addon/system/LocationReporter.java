@@ -6,9 +6,9 @@ import meteordevelopment.meteorclient.MeteorClient;
 import meteordevelopment.meteorclient.events.game.GameJoinedEvent;
 import meteordevelopment.meteorclient.events.game.GameLeftEvent;
 import meteordevelopment.orbit.EventHandler;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.network.ServerInfo;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.multiplayer.PlayerInfo;
+import net.minecraft.client.multiplayer.ServerData;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
@@ -38,20 +38,20 @@ public final class LocationReporter {
 
     @Nullable
     private static String playSessionServer() {
-        if (mc.player == null || mc.world == null) return null;
-        if (mc.isInSingleplayer()) return "";
-        ClientPlayNetworkHandler handler = mc.getNetworkHandler();
+        if (mc.player == null || mc.level == null) return null;
+        if (mc.isSingleplayer()) return "";
+        ClientPacketListener handler = mc.getConnection();
         if (handler == null) return null;
-        ServerInfo info = handler.getServerInfo();
-        if (info == null || info.address.isBlank()) return null;
-        return info.address;
+        ServerData info = handler.getServerData();
+        if (info == null || info.ip.isBlank()) return null;
+        return info.ip;
     }
 
     private static JsonObject buildPayload(String server) {
         JsonObject body = new JsonObject();
         body.addProperty("server", server);
         body.addProperty("name", mc.player.getName().getString());
-        body.addProperty("uuid", mc.player.getUuidAsString());
+        body.addProperty("uuid", mc.player.getStringUUID());
 
         JsonObject pos = new JsonObject();
         pos.addProperty("x", mc.player.getX());
@@ -60,9 +60,9 @@ public final class LocationReporter {
         body.add("pos", pos);
 
         int ping = 0;
-        ClientPlayNetworkHandler handler = mc.getNetworkHandler();
+        ClientPacketListener handler = mc.getConnection();
         if (handler != null) {
-            PlayerListEntry entry = handler.getPlayerListEntry(mc.player.getUuid());
+            PlayerInfo entry = handler.getPlayerInfo(mc.player.getUUID());
             if (entry != null) ping = entry.getLatency();
         }
         body.addProperty("ping", ping);

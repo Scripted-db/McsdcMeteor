@@ -2,11 +2,11 @@ package com.mcsdc.addon.gui.vanilla;
 
 import com.mcsdc.addon.system.McsdcSystem;
 import com.mcsdc.addon.system.ServerStorage;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.CommonColors;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,13 +14,13 @@ import java.util.List;
 public class McsdcRecentScreen extends McsdcParentScreen {
     private McsdcServerListWidget serverList;
     private List<ServerStorage> servers = new ArrayList<>();
-    private ButtonWidget joinBtn;
-    private ButtonWidget addBtn;
-    private ButtonWidget infoBtn;
-    private ButtonWidget removeBtn;
+    private Button joinBtn;
+    private Button addBtn;
+    private Button infoBtn;
+    private Button removeBtn;
 
     public McsdcRecentScreen(Screen parent) {
-        super(Text.literal("Recent Servers"), parent);
+        super(Component.literal("Recent Servers"), parent);
     }
 
     @Override
@@ -30,25 +30,25 @@ public class McsdcRecentScreen extends McsdcParentScreen {
         int top = 36;
         int bottom = height - 32;
         serverList = new McsdcServerListWidget(16, top, width - 32, bottom - top);
-        addDrawableChild(serverList);
+        addRenderableWidget(serverList);
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Clear all"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("Clear all"), b -> {
             McsdcSystem.get().clearRecentServers();
             servers.clear();
             serverList.setServers(List.of());
-        }).dimensions(16, height - 28, 72, 20).build());
+        }).bounds(16, height - 28, 72, 20).build());
 
-        joinBtn = addDrawableChild(ButtonWidget.builder(Text.literal("Join"), b -> ServerListActions.join(serverList))
-            .dimensions(width / 2 - 120, height - 28, 56, 20).build());
-        addBtn = addDrawableChild(ButtonWidget.builder(Text.literal("Add"), b -> ServerListActions.add(serverList))
-            .dimensions(width / 2 - 60, height - 28, 56, 20).build());
-        infoBtn = addDrawableChild(ButtonWidget.builder(Text.literal("Info"), b -> ServerListActions.info(client, serverList))
-            .dimensions(width / 2, height - 28, 56, 20).build());
-        removeBtn = addDrawableChild(ButtonWidget.builder(Text.literal("Remove"), b -> removeSelected())
-            .dimensions(width / 2 + 60, height - 28, 64, 20).build());
+        joinBtn = addRenderableWidget(Button.builder(Component.literal("Join"), b -> ServerListActions.join(serverList))
+            .bounds(width / 2 - 120, height - 28, 56, 20).build());
+        addBtn = addRenderableWidget(Button.builder(Component.literal("Add"), b -> ServerListActions.add(serverList))
+            .bounds(width / 2 - 60, height - 28, 56, 20).build());
+        infoBtn = addRenderableWidget(Button.builder(Component.literal("Info"), b -> ServerListActions.info(minecraft, serverList))
+            .bounds(width / 2, height - 28, 56, 20).build());
+        removeBtn = addRenderableWidget(Button.builder(Component.literal("Remove"), b -> removeSelected())
+            .bounds(width / 2 + 60, height - 28, 64, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> close())
-            .dimensions(width - 60, height - 28, 44, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Back"), b -> onClose())
+            .bounds(width - 60, height - 28, 44, 20).build());
 
         serverList.setOnSelectionChanged(this::updateButtons);
         serverList.setServers(servers);
@@ -69,11 +69,11 @@ public class McsdcRecentScreen extends McsdcParentScreen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 12, Colors.WHITE);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        super.extractRenderState(context, mouseX, mouseY, delta);
+        context.centeredText(font, title, width / 2, 12, CommonColors.WHITE);
         if (servers.isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, "Recently joined servers will appear here.", width / 2, height / 2, Colors.GRAY);
+            context.centeredText(font, "Recently joined servers will appear here.", width / 2, height / 2, CommonColors.GRAY);
         }
     }
 }

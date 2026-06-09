@@ -5,12 +5,12 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mcsdc.addon.Api;
 import com.mcsdc.addon.system.McsdcSystem;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.CommonColors;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -22,13 +22,13 @@ public class McsdcFriendsScreen extends McsdcParentScreen {
     private final TabData list = new TabData();
     private final TabData locations = new TabData();
     @Nullable private String busy;
-    private TextFieldWidget nameField;
+    private EditBox nameField;
     private McsdcFriendListWidget listWidget;
     private String status = "";
-    private ButtonWidget actionBtn;
+    private Button actionBtn;
 
     public McsdcFriendsScreen(Screen parent) {
-        super(Text.literal("Friends"), parent);
+        super(Component.literal("Friends"), parent);
     }
 
     @Override
@@ -36,27 +36,27 @@ public class McsdcFriendsScreen extends McsdcParentScreen {
         int top = 60;
         int listH = height - top - 80;
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("List"), b -> switchTab(false))
-            .dimensions(16, 28, 80, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("On a server"), b -> switchTab(true))
-            .dimensions(100, 28, 100, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("List"), b -> switchTab(false))
+            .bounds(16, 28, 80, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("On a server"), b -> switchTab(true))
+            .bounds(100, 28, 100, 20).build());
 
         listWidget = new McsdcFriendListWidget(16, top, width - 32, listH);
-        addDrawableChild(listWidget);
+        addRenderableWidget(listWidget);
 
         if (!locationsTab) {
-            nameField = new TextFieldWidget(textRenderer, 16, height - 52, width - 140, 20, Text.literal("username"));
+            nameField = new EditBox(font, 16, height - 52, width - 140, 20, Component.literal("username"));
             nameField.setMaxLength(32);
-            addDrawableChild(nameField);
-            addDrawableChild(ButtonWidget.builder(Text.literal("Add"), b -> addFriend())
-                .dimensions(width - 116, height - 52, 50, 20).build());
+            addRenderableWidget(nameField);
+            addRenderableWidget(Button.builder(Component.literal("Add"), b -> addFriend())
+                .bounds(width - 116, height - 52, 50, 20).build());
         }
 
-        actionBtn = addDrawableChild(ButtonWidget.builder(Text.literal(locationsTab ? "Join" : "Remove"), b -> runAction())
-            .dimensions(16, height - 28, 80, 20).build());
+        actionBtn = addRenderableWidget(Button.builder(Component.literal(locationsTab ? "Join" : "Remove"), b -> runAction())
+            .bounds(16, height - 28, 80, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> close())
-            .dimensions(width - 60, height - 28, 44, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Back"), b -> onClose())
+            .bounds(width - 60, height - 28, 44, 20).build());
 
         loadTab();
         updateActionBtn();
@@ -73,7 +73,7 @@ public class McsdcFriendsScreen extends McsdcParentScreen {
     }
 
     private void rebuildUi() {
-        clearChildren();
+        clearWidgets();
         init();
     }
 
@@ -84,7 +84,7 @@ public class McsdcFriendsScreen extends McsdcParentScreen {
             tab.loading = true;
             String path = locationsTab ? "/my/friends/locations" : "/my/friends";
             CompletableFuture.supplyAsync(() -> Api.requestGet(path))
-                .thenAccept(r -> client.execute(() -> {
+                .thenAccept(r -> minecraft.execute(() -> {
                     if (r.ok()) tab.ok(Api.unwrapArray(r.body()));
                     else tab.fail(r.error());
                     status = tab.error.isEmpty() ? "" : tab.error;
@@ -92,7 +92,7 @@ public class McsdcFriendsScreen extends McsdcParentScreen {
                     updateActionBtn();
                 }))
                 .exceptionally(e -> {
-                    client.execute(() -> {
+                    minecraft.execute(() -> {
                         tab.fail(e.getMessage());
                         status = tab.error;
                         populateList();
@@ -135,7 +135,7 @@ public class McsdcFriendsScreen extends McsdcParentScreen {
     }
 
     private void addFriend() {
-        String name = nameField.getText().trim();
+        String name = nameField.getValue().trim();
         if (name.isEmpty()) return;
         if (name.equals(McsdcSystem.get().getUsername())) {
             status = "cant add yourself lol";
@@ -145,11 +145,11 @@ public class McsdcFriendsScreen extends McsdcParentScreen {
         JsonObject body = new JsonObject();
         body.addProperty("name", name);
         CompletableFuture.supplyAsync(() -> Api.requestPost("/my/friends", body))
-            .thenAccept(r -> client.execute(() -> {
+            .thenAccept(r -> minecraft.execute(() -> {
                 busy = null;
                 if (!r.ok()) status = r.error();
                 else {
-                    nameField.setText("");
+                    nameField.setValue("");
                     list.invalidate();
                     rebuildUi();
                 }
@@ -171,7 +171,7 @@ public class McsdcFriendsScreen extends McsdcParentScreen {
         JsonObject body = new JsonObject();
         body.addProperty("name", name);
         CompletableFuture.supplyAsync(() -> Api.requestPost("/my/friends/deny", body))
-            .thenAccept(r -> client.execute(() -> {
+            .thenAccept(r -> minecraft.execute(() -> {
                 busy = null;
                 if (!r.ok()) status = r.error();
                 else {
@@ -183,36 +183,36 @@ public class McsdcFriendsScreen extends McsdcParentScreen {
 
     private void join(String address) {
         if (!canJoin(address)) return;
-        if (client.world != null) client.world.disconnect(Text.of(""));
-        VanillaScreens.connectTo(client, address);
+        if (minecraft.level != null) minecraft.level.disconnect(Component.literal(""));
+        VanillaScreens.connectTo(minecraft, address);
     }
 
     private void updateActionBtn() {
         if (actionBtn == null) return;
         McsdcFriendListWidget.Row row = listWidget != null ? listWidget.getSelectedRow() : null;
         if (locationsTab) {
-            actionBtn.setMessage(Text.literal("Join"));
+            actionBtn.setMessage(Component.literal("Join"));
             actionBtn.active = row != null && canJoin(row.col2());
         } else {
-            actionBtn.setMessage(Text.literal("Remove"));
+            actionBtn.setMessage(Component.literal("Remove"));
             actionBtn.active = row != null && busy == null;
         }
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 12, Colors.WHITE);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        super.extractRenderState(context, mouseX, mouseY, delta);
+        context.centeredText(font, title, width / 2, 12, CommonColors.WHITE);
         if (locationsTab) {
-            context.drawTextWithShadow(textRenderer, "Name", 20, 52, Colors.GRAY);
-            context.drawTextWithShadow(textRenderer, "Server", 136, 52, Colors.GRAY);
+            context.text(font, "Name", 20, 52, CommonColors.GRAY, true);
+            context.text(font, "Server", 136, 52, CommonColors.GRAY, true);
         } else {
-            context.drawTextWithShadow(textRenderer, "Name", 20, 52, Colors.GRAY);
-            context.drawTextWithShadow(textRenderer, "Role", 136, 52, Colors.GRAY);
-            context.drawTextWithShadow(textRenderer, "Stage", 236, 52, Colors.GRAY);
+            context.text(font, "Name", 20, 52, CommonColors.GRAY, true);
+            context.text(font, "Role", 136, 52, CommonColors.GRAY, true);
+            context.text(font, "Stage", 236, 52, CommonColors.GRAY, true);
         }
         if (!status.isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, status, width / 2, height - 68, Colors.YELLOW);
+            context.centeredText(font, status, width / 2, height - 68, CommonColors.YELLOW);
         }
         updateActionBtn();
     }

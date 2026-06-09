@@ -4,7 +4,7 @@ import com.mcsdc.addon.gui.LoginScreen;
 import com.mcsdc.addon.system.McsdcSystem;
 import meteordevelopment.meteorclient.gui.GuiThemes;
 import meteordevelopment.meteorclient.gui.WindowScreen;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screens.Screen;
 
 import static meteordevelopment.meteorclient.MeteorClient.mc;
 
