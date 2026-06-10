@@ -6,6 +6,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.CommonColors;
 import org.jetbrains.annotations.Nullable;
@@ -87,30 +88,30 @@ public class McsdcServerListWidget extends AbstractWidget {
     }
 
     @Override
-    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (!active || !visible) return false;
-        if (!isMouseOver(click.x(), click.y())) return false;
+        if (!isMouseOver(event.x(), event.y())) return false;
 
-        if (hasScrollbar() && isMouseOverScrollbar(click.x(), click.y())) {
+        if (hasScrollbar() && isMouseOverScrollbar(event.x(), event.y())) {
             draggingScrollbar = true;
-            scrollbarDragOffset = click.y() - scrollbarThumbY();
-            setScrollFromScrollbarY(click.y() - scrollbarDragOffset);
+            scrollbarDragOffset = event.y() - scrollbarThumbY();
+            setScrollFromScrollbarY(event.y() - scrollbarDragOffset);
             return true;
         }
 
-        if (selectIndex(indexAtClick(click.y()))) return true;
+        if (selectIndex(indexAtClick(event.y()))) return true;
         return false;
     }
 
     @Override
-    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent click, double deltaX, double deltaY) {
+    public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
         if (!draggingScrollbar) return false;
-        setScrollFromScrollbarY(click.y() - scrollbarDragOffset);
+        setScrollFromScrollbarY(event.y() - scrollbarDragOffset);
         return true;
     }
 
     @Override
-    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent click) {
+    public boolean mouseReleased(MouseButtonEvent event) {
         if (!draggingScrollbar) return false;
         draggingScrollbar = false;
         return true;

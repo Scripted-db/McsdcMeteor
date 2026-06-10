@@ -5,6 +5,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.CommonColors;
 import org.jetbrains.annotations.Nullable;
@@ -81,11 +82,11 @@ public class McsdcFriendListWidget extends AbstractWidget {
     }
 
     @Override
-    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (!active || !visible) return false;
-        if (!isMouseOver(click.x(), click.y())) return false;
+        if (!isMouseOver(event.x(), event.y())) return false;
 
-        int idx = ((int) click.y() - getY() + (int) scrollY) / ROW_HEIGHT;
+        int idx = ((int) event.y() - getY() + (int) scrollY) / ROW_HEIGHT;
         if (idx >= 0 && idx < rows.size()) {
             selected = idx;
             return true;
