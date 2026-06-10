@@ -146,16 +146,16 @@ public class McsdcSystem extends System<McsdcSystem> {
 
     @Override
     public McsdcSystem fromTag(CompoundTag tag) {
-        this.token = tag.getString("token").get();
-        this.username = tag.getString("username").get();
-        this.level = tag.getInt("level").get();
+        this.token = tag.getString("token").orElse("");
+        this.username = tag.getString("username").orElse("");
+        this.level = tag.getInt("level").orElse(-1);
 
-        ListTag list = tag.getList("recent").get();
+        ListTag list = tag.getList("recent").orElse(new ListTag());
         List<ServerStorage> tempList = new ArrayList<>();
         for (Tag element : list) {
             CompoundTag compound = (CompoundTag) element;
-            String ip = compound.getString("ip").get();
-            String ver = compound.getString("version").get();
+            String ip = compound.getString("ip").orElse("");
+            String ver = compound.getString("version").orElse("");
             tempList.add(new ServerStorage(ip, ver, null, null));
         }
 
@@ -165,16 +165,14 @@ public class McsdcSystem extends System<McsdcSystem> {
         }
 
         serverQueue.clear();
-        if (tag.getList("serverQueue").isPresent()) {
-            ListTag queueList = tag.getList("serverQueue").get();
-            for (Tag element : queueList) {
-                CompoundTag queueEntry = (CompoundTag) element;
-                String ip = queueEntry.getString("ip").get();
-                String version = queueEntry.getString("version").get();
-                Long lastScanned = queueEntry.getLong("lastScanned").orElse(null);
-                Long lastSeen = queueEntry.getLong("lastSeen").orElse(null);
-                serverQueue.add(new ServerStorage(ip, version, lastScanned, lastSeen));
-            }
+        ListTag queueList = tag.getList("serverQueue").orElse(new ListTag());
+        for (Tag element : queueList) {
+            CompoundTag queueEntry = (CompoundTag) element;
+            String ip = queueEntry.getString("ip").orElse("");
+            String version = queueEntry.getString("version").orElse("");
+            Long lastScanned = queueEntry.getLong("lastScanned").orElse(null);
+            Long lastSeen = queueEntry.getLong("lastSeen").orElse(null);
+            serverQueue.add(new ServerStorage(ip, version, lastScanned, lastSeen));
         }
 
         this.currentServerIndex = tag.getInt("currentServerIndex").orElse(0);
