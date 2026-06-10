@@ -1,17 +1,17 @@
 package com.mcsdc.addon.gui.vanilla;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
+import net.minecraft.client.Minecraft;
+
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.CommonColors;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class McsdcFriendListWidget extends ClickableWidget {
+public class McsdcFriendListWidget extends AbstractWidget {
     public static final int ROW_HEIGHT = 20;
 
     public record Row(String name, String col2, String col3) {}
@@ -21,7 +21,7 @@ public class McsdcFriendListWidget extends ClickableWidget {
     private double scrollY;
 
     public McsdcFriendListWidget(int x, int y, int width, int height) {
-        super(x, y, width, height, Text.empty());
+        super(x, y, width, height, Component.empty());
     }
 
     public void setRows(List<Row> rows) {
@@ -37,7 +37,7 @@ public class McsdcFriendListWidget extends ClickableWidget {
     }
 
     @Override
-    protected void renderWidget(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        protected void extractWidgetRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         int x = getX();
         int y = getY();
         int w = getWidth();
@@ -46,7 +46,7 @@ public class McsdcFriendListWidget extends ClickableWidget {
         ctx.fill(x, y, x + w, y + h, 0xC0101010);
         ctx.enableScissor(x, y, x + w, y + h);
 
-        var tr = MinecraftClient.getInstance().textRenderer;
+        var tr = Minecraft.getInstance().font;
         for (int i = 0; i < rows.size(); i++) {
             int rowY = y + 1 + i * ROW_HEIGHT - (int) scrollY;
             if (rowY + ROW_HEIGHT < y) continue;
@@ -59,11 +59,11 @@ public class McsdcFriendListWidget extends ClickableWidget {
             if (sel) ctx.fill(x, rowY, x + w, rowY + ROW_HEIGHT, 0x80808080);
             else if (hovered) ctx.fill(x, rowY, x + w, rowY + ROW_HEIGHT, 0x40404040);
 
-            int color = sel || hovered ? Colors.WHITE : Colors.LIGHT_GRAY;
-            ctx.drawTextWithShadow(tr, row.name(), x + 4, rowY + 5, color);
-            ctx.drawTextWithShadow(tr, row.col2(), x + 120, rowY + 5, Colors.LIGHT_GRAY);
+            int color = sel || hovered ? CommonColors.WHITE : CommonColors.LIGHT_GRAY;
+            ctx.text(tr, row.name(), x + 4, rowY + 5, color, true);
+            ctx.text(tr, row.col2(), x + 120, rowY + 5, CommonColors.LIGHT_GRAY, true);
             if (!row.col3().isEmpty()) {
-                ctx.drawTextWithShadow(tr, row.col3(), x + 220, rowY + 5, Colors.GRAY);
+                ctx.text(tr, row.col3(), x + 220, rowY + 5, CommonColors.GRAY, true);
             }
         }
 
@@ -81,7 +81,7 @@ public class McsdcFriendListWidget extends ClickableWidget {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
         if (!active || !visible) return false;
         if (!isMouseOver(click.x(), click.y())) return false;
 
@@ -94,8 +94,8 @@ public class McsdcFriendListWidget extends ClickableWidget {
     }
 
     @Override
-    protected void appendClickableNarrations(NarrationMessageBuilder builder) {
-        appendDefaultNarrations(builder);
+    protected void updateWidgetNarration(NarrationElementOutput builder) {
+        defaultButtonNarrationText(builder);
     }
 
     @Override

@@ -1,14 +1,14 @@
 package com.mcsdc.addon.gui.vanilla;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
+import net.minecraft.client.Minecraft;
+
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.CommonColors;
 
 import java.util.function.Consumer;
 
@@ -17,7 +17,7 @@ public class McsdcVersionSelectScreen extends McsdcParentScreen {
     private final Consumer<SearchVersion> onSelect;
 
     public McsdcVersionSelectScreen(Screen parent, SearchVersion selected, Consumer<SearchVersion> onSelect) {
-        super(Text.literal("Select Version"), parent);
+        super(Component.literal("Select Version"), parent);
         this.selected = selected;
         this.onSelect = onSelect;
     }
@@ -29,22 +29,22 @@ public class McsdcVersionSelectScreen extends McsdcParentScreen {
         int top = 36;
         int bottom = height - 36;
 
-        addDrawableChild(new VersionListWidget(listX, top, listW, bottom - top, selected, version -> {
+        addRenderableWidget(new VersionListWidget(listX, top, listW, bottom - top, selected, version -> {
             onSelect.accept(version);
-            close();
+            onClose();
         }));
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> close())
-            .dimensions(width / 2 - 50, height - 28, 100, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Back"), b -> onClose())
+            .bounds(width / 2 - 50, height - 28, 100, 20).build());
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 12, Colors.WHITE);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        super.extractRenderState(context, mouseX, mouseY, delta);
+        context.centeredText(font, title, width / 2, 12, CommonColors.WHITE);
     }
 
-    private static final class VersionListWidget extends ClickableWidget {
+    private static final class VersionListWidget extends AbstractWidget {
         private static final int ROW_HEIGHT = 20;
 
         private final SearchVersion selected;
@@ -54,13 +54,13 @@ public class McsdcVersionSelectScreen extends McsdcParentScreen {
         private double scrollbarDragOffset;
 
         private VersionListWidget(int x, int y, int width, int height, SearchVersion selected, Consumer<SearchVersion> onSelect) {
-            super(x, y, width, height, Text.empty());
+            super(x, y, width, height, Component.empty());
             this.selected = selected;
             this.onSelect = onSelect;
         }
 
         @Override
-        protected void renderWidget(DrawContext context, int mouseX, int mouseY, float delta) {
+        protected void extractWidgetRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
             int x = getX();
             int y = getY();
             int w = getWidth();
@@ -69,7 +69,7 @@ public class McsdcVersionSelectScreen extends McsdcParentScreen {
             context.fill(x, y, x + w, y + h, 0xC0101010);
             context.enableScissor(x, y, x + w, y + h);
 
-            var textRenderer = MinecraftClient.getInstance().textRenderer;
+            var font = Minecraft.getInstance().font;
             SearchVersion[] versions = SearchVersion.values();
             for (int i = 0; i < versions.length; i++) {
                 int rowY = y + 1 + i * ROW_HEIGHT - (int) scrollY;
@@ -83,8 +83,8 @@ public class McsdcVersionSelectScreen extends McsdcParentScreen {
                 if (current) context.fill(x, rowY, x + w, rowY + ROW_HEIGHT, 0x80606060);
                 else if (hovered) context.fill(x, rowY, x + w, rowY + ROW_HEIGHT, 0x40404040);
 
-                int color = current ? Colors.YELLOW : hovered ? Colors.WHITE : Colors.LIGHT_GRAY;
-                context.drawTextWithShadow(textRenderer, version.version, x + 8, rowY + 6, color);
+                int color = current ? CommonColors.YELLOW : hovered ? CommonColors.WHITE : CommonColors.LIGHT_GRAY;
+                context.text(font, version.version, x + 8, rowY + 6, color, true);
             }
 
             context.disableScissor();
@@ -92,7 +92,7 @@ public class McsdcVersionSelectScreen extends McsdcParentScreen {
         }
 
         @Override
-        public boolean mouseClicked(Click click, boolean doubled) {
+        public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
             if (!active || !visible) return false;
             if (!isMouseOver(click.x(), click.y())) return false;
 
@@ -113,14 +113,14 @@ public class McsdcVersionSelectScreen extends McsdcParentScreen {
         }
 
         @Override
-        public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+        public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent click, double deltaX, double deltaY) {
             if (!draggingScrollbar) return false;
             setScrollFromScrollbarY(click.y() - scrollbarDragOffset);
             return true;
         }
 
         @Override
-        public boolean mouseReleased(Click click) {
+        public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent click) {
             if (!draggingScrollbar) return false;
             draggingScrollbar = false;
             return true;
@@ -134,11 +134,11 @@ public class McsdcVersionSelectScreen extends McsdcParentScreen {
         }
 
         @Override
-        protected void appendClickableNarrations(NarrationMessageBuilder builder) {
-            appendDefaultNarrations(builder);
+        protected void updateWidgetNarration(NarrationElementOutput builder) {
+            defaultButtonNarrationText(builder);
         }
 
-        private void drawScrollbar(DrawContext context) {
+        private void drawScrollbar(GuiGraphicsExtractor context) {
             if (!hasScrollbar()) return;
             int barX = scrollbarX();
             int thumbY = scrollbarThumbY();

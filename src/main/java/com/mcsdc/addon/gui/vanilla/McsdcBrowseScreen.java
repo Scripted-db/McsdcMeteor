@@ -8,12 +8,12 @@ import com.mcsdc.addon.system.MOTD;
 import com.mcsdc.addon.system.McsdcSystem;
 import com.mcsdc.addon.system.ServerSearchBuilder;
 import com.mcsdc.addon.system.ServerStorage;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.CommonColors;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,17 +27,17 @@ public class McsdcBrowseScreen extends McsdcParentScreen {
     private final BrowseState state = LAST_SEARCH;
 
     private McsdcServerListWidget serverList;
-    private TextFieldWidget versionField;
+    private EditBox versionField;
     private boolean searching;
 
-    private ButtonWidget joinBtn;
-    private ButtonWidget addBtn;
-    private ButtonWidget infoBtn;
-    private ButtonWidget addAllBtn;
-    private ButtonWidget shuffleBtn;
+    private Button joinBtn;
+    private Button addBtn;
+    private Button infoBtn;
+    private Button addAllBtn;
+    private Button shuffleBtn;
 
     public McsdcBrowseScreen(Screen parent) {
-        super(Text.literal("Find Servers"), parent);
+        super(Component.literal("Find Servers"), parent);
     }
 
     @Override
@@ -51,92 +51,92 @@ public class McsdcBrowseScreen extends McsdcParentScreen {
         int listH = bottom - top;
 
         serverList = new McsdcServerListWidget(listX, top, listW, listH);
-        addDrawableChild(serverList);
+        addRenderableWidget(serverList);
 
         int fx = margin;
         int fy = top;
         int rowH = 22;
 
-        addDrawableChild(FilterWidgets.cycleFlag("Visited", state.visited, f -> state.visited = f, fx, fy));
+        addRenderableWidget(FilterWidgets.cycleFlag("Visited", state.visited, f -> state.visited = f, fx, fy));
         fy += rowH;
-        addDrawableChild(FilterWidgets.cycleFlag("Modded", state.modded, f -> state.modded = f, fx, fy));
+        addRenderableWidget(FilterWidgets.cycleFlag("Modded", state.modded, f -> state.modded = f, fx, fy));
         fy += rowH;
-        addDrawableChild(FilterWidgets.cycleFlag("Whitelist", state.whitelist, f -> state.whitelist = f, fx, fy));
+        addRenderableWidget(FilterWidgets.cycleFlag("Whitelist", state.whitelist, f -> state.whitelist = f, fx, fy));
         fy += rowH;
-        addDrawableChild(FilterWidgets.cycleFlag("Cracked", state.cracked, f -> state.cracked = f, fx, fy));
+        addRenderableWidget(FilterWidgets.cycleFlag("Cracked", state.cracked, f -> state.cracked = f, fx, fy));
         fy += rowH;
-        addDrawableChild(FilterWidgets.cycleFlag("Griefed", state.griefed, f -> state.griefed = f, fx, fy));
+        addRenderableWidget(FilterWidgets.cycleFlag("Griefed", state.griefed, f -> state.griefed = f, fx, fy));
         fy += rowH;
-        addDrawableChild(FilterWidgets.cycleFlag("Saved", state.saved, f -> state.saved = f, fx, fy));
+        addRenderableWidget(FilterWidgets.cycleFlag("Saved", state.saved, f -> state.saved = f, fx, fy));
         fy += rowH;
-        addDrawableChild(FilterWidgets.cycleFlag("Active", state.active, f -> state.active = f, fx, fy));
+        addRenderableWidget(FilterWidgets.cycleFlag("Active", state.active, f -> state.active = f, fx, fy));
         fy += rowH;
-        addDrawableChild(FilterWidgets.cycleFlag("History", state.hasHistory, f -> state.hasHistory = f, fx, fy));
+        addRenderableWidget(FilterWidgets.cycleFlag("History", state.hasHistory, f -> state.hasHistory = f, fx, fy));
         fy += rowH;
-        addDrawableChild(FilterWidgets.cycleFlag("Notes", state.hasNotes, f -> state.hasNotes = f, fx, fy));
+        addRenderableWidget(FilterWidgets.cycleFlag("Notes", state.hasNotes, f -> state.hasNotes = f, fx, fy));
         fy += rowH;
-        addDrawableChild(FilterWidgets.toggle("Hide offline", state.hideOffline, v -> state.hideOffline = v, fx, fy));
+        addRenderableWidget(FilterWidgets.toggle("Hide offline", state.hideOffline, v -> state.hideOffline = v, fx, fy));
         fy += rowH;
 
-        addDrawableChild(FilterWidgets.toggle("Adv version", state.advancedVersion, v -> {
+        addRenderableWidget(FilterWidgets.toggle("Adv version", state.advancedVersion, v -> {
             state.advancedVersion = v;
             rebuildUi();
         }, fx, fy));
         fy += rowH;
 
         if (state.advancedVersion) {
-            versionField = new TextFieldWidget(textRenderer, fx, fy, filterW, 18, Text.literal("version"));
+            versionField = new EditBox(font, fx, fy, filterW, 18, Component.literal("version"));
             versionField.setMaxLength(64);
-            versionField.setText(state.advancedVersionText);
-            addDrawableChild(versionField);
+            versionField.setValue(state.advancedVersionText);
+            addRenderableWidget(versionField);
             fy += rowH;
         } else {
-            addDrawableChild(ButtonWidget.builder(Text.literal("Version: " + state.version.version), b ->
-                client.setScreen(new McsdcVersionSelectScreen(this, state.version, v -> state.version = v)))
-                .dimensions(fx, fy, FilterWidgets.FILTER_WIDTH, 20).build());
+            addRenderableWidget(Button.builder(Component.literal("Version: " + state.version.version), b ->
+                minecraft.setScreen(new McsdcVersionSelectScreen(this, state.version, v -> state.version = v)))
+                .bounds(fx, fy, FilterWidgets.FILTER_WIDTH, 20).build());
             fy += rowH;
-            addDrawableChild(FilterWidgets.toggle("Vanilla", state.vanilla, v -> state.vanilla = v, fx, fy));
+            addRenderableWidget(FilterWidgets.toggle("Vanilla", state.vanilla, v -> state.vanilla = v, fx, fy));
             fy += rowH;
         }
 
-        addDrawableChild(FilterWidgets.toggle("Adv MOTD", state.advancedMotd, v -> {
+        addRenderableWidget(FilterWidgets.toggle("Adv MOTD", state.advancedMotd, v -> {
             state.advancedMotd = v;
             rebuildUi();
         }, fx, fy));
         fy += rowH;
 
         if (state.advancedMotd) {
-            addDrawableChild(FilterWidgets.cycleFlag("Default", state.defaultMotd, f -> state.defaultMotd = f, fx, fy));
+            addRenderableWidget(FilterWidgets.cycleFlag("Default", state.defaultMotd, f -> state.defaultMotd = f, fx, fy));
             fy += rowH;
-            addDrawableChild(FilterWidgets.cycleFlag("Community", state.communityMotd, f -> state.communityMotd = f, fx, fy));
+            addRenderableWidget(FilterWidgets.cycleFlag("Community", state.communityMotd, f -> state.communityMotd = f, fx, fy));
             fy += rowH;
-            addDrawableChild(FilterWidgets.cycleFlag("Creative", state.creativeMotd, f -> state.creativeMotd = f, fx, fy));
+            addRenderableWidget(FilterWidgets.cycleFlag("Creative", state.creativeMotd, f -> state.creativeMotd = f, fx, fy));
             fy += rowH;
-            addDrawableChild(FilterWidgets.cycleFlag("Bigotry", state.bigotryMotd, f -> state.bigotryMotd = f, fx, fy));
+            addRenderableWidget(FilterWidgets.cycleFlag("Bigotry", state.bigotryMotd, f -> state.bigotryMotd = f, fx, fy));
             fy += rowH;
-            addDrawableChild(FilterWidgets.cycleFlag("Furry", state.furryMotd, f -> state.furryMotd = f, fx, fy));
+            addRenderableWidget(FilterWidgets.cycleFlag("Furry", state.furryMotd, f -> state.furryMotd = f, fx, fy));
             fy += rowH;
-            addDrawableChild(FilterWidgets.cycleFlag("LGBT", state.lgbtMotd, f -> state.lgbtMotd = f, fx, fy));
+            addRenderableWidget(FilterWidgets.cycleFlag("LGBT", state.lgbtMotd, f -> state.lgbtMotd = f, fx, fy));
             fy += rowH;
         }
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Search"), b -> runSearch())
-            .dimensions(fx, bottom - 22, filterW, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Search"), b -> runSearch())
+            .bounds(fx, bottom - 22, filterW, 20).build());
 
         int bx = listX;
-        joinBtn = addDrawableChild(ButtonWidget.builder(Text.literal("Join"), b -> ServerListActions.join(serverList))
-            .dimensions(bx, height - 28, 72, 20).build());
-        addBtn = addDrawableChild(ButtonWidget.builder(Text.literal("Add"), b -> addSelected())
-            .dimensions(bx + 76, height - 28, 72, 20).build());
-        infoBtn = addDrawableChild(ButtonWidget.builder(Text.literal("Info"), b -> ServerListActions.info(client, serverList))
-            .dimensions(bx + 152, height - 28, 72, 20).build());
-        addAllBtn = addDrawableChild(ButtonWidget.builder(Text.literal("Add all"), b -> addAll())
-            .dimensions(bx + 228, height - 28, 72, 20).build());
-        shuffleBtn = addDrawableChild(ButtonWidget.builder(Text.literal("Shuffle"), b -> shuffle())
-            .dimensions(bx + 304, height - 28, 72, 20).build());
+        joinBtn = addRenderableWidget(Button.builder(Component.literal("Join"), b -> ServerListActions.join(serverList))
+            .bounds(bx, height - 28, 72, 20).build());
+        addBtn = addRenderableWidget(Button.builder(Component.literal("Add"), b -> addSelected())
+            .bounds(bx + 76, height - 28, 72, 20).build());
+        infoBtn = addRenderableWidget(Button.builder(Component.literal("Info"), b -> ServerListActions.info(minecraft, serverList))
+            .bounds(bx + 152, height - 28, 72, 20).build());
+        addAllBtn = addRenderableWidget(Button.builder(Component.literal("Add all"), b -> addAll())
+            .bounds(bx + 228, height - 28, 72, 20).build());
+        shuffleBtn = addRenderableWidget(Button.builder(Component.literal("Shuffle"), b -> shuffle())
+            .bounds(bx + 304, height - 28, 72, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Back"), b -> close())
-            .dimensions(width - 76, height - 28, 60, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Back"), b -> onClose())
+            .bounds(width - 76, height - 28, 60, 20).build());
 
         serverList.setOnSelectionChanged(this::updateActionButtons);
         if (!state.results.isEmpty()) serverList.setServers(state.results);
@@ -145,7 +145,7 @@ public class McsdcBrowseScreen extends McsdcParentScreen {
 
     private void rebuildUi() {
         captureVersionField();
-        clearChildren();
+        clearWidgets();
         init();
     }
 
@@ -187,7 +187,7 @@ public class McsdcBrowseScreen extends McsdcParentScreen {
             JsonObject json = ServerSearchBuilder.createFilter(search);
             Main.LOG.info(json.toString());
             return Api.postJson("/search/filter", json);
-        }).thenAccept(response -> client.execute(() -> {
+        }).thenAccept(response -> minecraft.execute(() -> {
             searching = false;
             if (response == null) {
                 rememberSearch(submittedSearch, "Enter a version string.");
@@ -217,7 +217,7 @@ public class McsdcBrowseScreen extends McsdcParentScreen {
 
     private Object resolveVersion() {
         if (state.advancedVersion) {
-            return versionField != null ? versionField.getText() : state.advancedVersionText;
+            return versionField != null ? versionField.getValue() : state.advancedVersionText;
         }
         int number = state.version.number;
         if (state.vanilla && number != -1) return state.version.version;
@@ -264,28 +264,28 @@ public class McsdcBrowseScreen extends McsdcParentScreen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 12, Colors.WHITE);
-        context.drawTextWithShadow(textRenderer, "Filters", 16, 36, Colors.LIGHT_GRAY);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        super.extractRenderState(context, mouseX, mouseY, delta);
+        context.centeredText(font, title, width / 2, 12, CommonColors.WHITE);
+        context.text(font, "Filters", 16, 36, CommonColors.LIGHT_GRAY, true);
         if (serverList != null) {
             int lx = serverList.getX();
             int lw = serverList.getWidth();
             int ly = serverList.getY();
             int lh = serverList.getHeight();
-            context.drawTextWithShadow(textRenderer, "Address", lx + 4, 36, Colors.GRAY);
-            context.drawTextWithShadow(textRenderer, "Version", lx + lw / 2, 36, Colors.GRAY);
+            context.text(font, "Address", lx + 4, 36, CommonColors.GRAY, true);
+            context.text(font, "Version", lx + lw / 2, 36, CommonColors.GRAY, true);
             if (state.results.isEmpty() && state.statusMessage.isEmpty()) {
-                context.drawCenteredTextWithShadow(textRenderer, "Set filters and hit Search", lx + lw / 2, ly + lh / 2, Colors.DARK_GRAY);
+                context.centeredText(font, "Set filters and hit Search", lx + lw / 2, ly + lh / 2, CommonColors.DARK_GRAY);
             }
         }
         if (!state.statusMessage.isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, state.statusMessage, width / 2, height - 42, Colors.YELLOW);
+            context.centeredText(font, state.statusMessage, width / 2, height - 42, CommonColors.YELLOW);
         }
     }
 
     private void captureVersionField() {
-        if (versionField != null) state.advancedVersionText = versionField.getText();
+        if (versionField != null) state.advancedVersionText = versionField.getValue();
     }
 
     private void rememberSearch(BrowseState submitted, String status) {

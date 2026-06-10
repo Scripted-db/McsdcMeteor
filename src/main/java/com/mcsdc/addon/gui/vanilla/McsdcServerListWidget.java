@@ -1,18 +1,18 @@
 package com.mcsdc.addon.gui.vanilla;
 
 import com.mcsdc.addon.system.ServerStorage;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
+import net.minecraft.client.Minecraft;
+
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.narration.NarrationElementOutput;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.CommonColors;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class McsdcServerListWidget extends ClickableWidget {
+public class McsdcServerListWidget extends AbstractWidget {
     public static final int ROW_HEIGHT = 18;
 
     private List<ServerStorage> servers = List.of();
@@ -23,7 +23,7 @@ public class McsdcServerListWidget extends ClickableWidget {
     @Nullable private Runnable onSelectionChanged;
 
     public McsdcServerListWidget(int x, int y, int width, int height) {
-        super(x, y, width, height, Text.empty());
+        super(x, y, width, height, Component.empty());
     }
 
     public void setOnSelectionChanged(@Nullable Runnable onSelectionChanged) {
@@ -45,7 +45,7 @@ public class McsdcServerListWidget extends ClickableWidget {
     }
 
     @Override
-    protected void renderWidget(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        protected void extractWidgetRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         int x = getX();
         int y = getY();
         int w = getWidth();
@@ -54,7 +54,7 @@ public class McsdcServerListWidget extends ClickableWidget {
         ctx.fill(x, y, x + w, y + h, 0xC0101010);
         ctx.enableScissor(x, y, x + w, y + h);
 
-        var tr = MinecraftClient.getInstance().textRenderer;
+        var tr = Minecraft.getInstance().font;
         for (int i = 0; i < servers.size(); i++) {
             int rowY = y + 1 + i * ROW_HEIGHT - (int) scrollY;
             if (rowY + ROW_HEIGHT < y) continue;
@@ -67,17 +67,17 @@ public class McsdcServerListWidget extends ClickableWidget {
             if (sel) ctx.fill(x, rowY, x + w, rowY + ROW_HEIGHT, 0x80808080);
             else if (hovered) ctx.fill(x, rowY, x + w, rowY + ROW_HEIGHT, 0x40404040);
 
-            int color = sel || hovered ? Colors.WHITE : Colors.LIGHT_GRAY;
-            ctx.drawTextWithShadow(tr, server.ip(), x + 4, rowY + 4, color);
+            int color = sel || hovered ? CommonColors.WHITE : CommonColors.LIGHT_GRAY;
+            ctx.text(tr, server.ip(), x + 4, rowY + 4, color, true);
             String version = server.version() != null ? server.version() : "?";
-            ctx.drawTextWithShadow(tr, version, x + w / 2, rowY + 4, color);
+            ctx.text(tr, version, x + w / 2, rowY + 4, color, true);
         }
 
         ctx.disableScissor();
         drawScrollbar(ctx, x, y, w, h);
     }
 
-    private void drawScrollbar(DrawContext ctx, int x, int y, int w, int h) {
+    private void drawScrollbar(GuiGraphicsExtractor ctx, int x, int y, int w, int h) {
         if (!hasScrollbar()) return;
         int barX = scrollbarX();
         int thumbH = scrollbarThumbHeight();
@@ -87,7 +87,7 @@ public class McsdcServerListWidget extends ClickableWidget {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubled) {
+    public boolean mouseClicked(net.minecraft.client.input.MouseButtonEvent click, boolean doubled) {
         if (!active || !visible) return false;
         if (!isMouseOver(click.x(), click.y())) return false;
 
@@ -103,14 +103,14 @@ public class McsdcServerListWidget extends ClickableWidget {
     }
 
     @Override
-    public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+    public boolean mouseDragged(net.minecraft.client.input.MouseButtonEvent click, double deltaX, double deltaY) {
         if (!draggingScrollbar) return false;
         setScrollFromScrollbarY(click.y() - scrollbarDragOffset);
         return true;
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(net.minecraft.client.input.MouseButtonEvent click) {
         if (!draggingScrollbar) return false;
         draggingScrollbar = false;
         return true;
@@ -124,8 +124,8 @@ public class McsdcServerListWidget extends ClickableWidget {
     }
 
     @Override
-    protected void appendClickableNarrations(NarrationMessageBuilder builder) {
-        appendDefaultNarrations(builder);
+    protected void updateWidgetNarration(NarrationElementOutput builder) {
+        defaultButtonNarrationText(builder);
     }
 
     private int contentHeight() {

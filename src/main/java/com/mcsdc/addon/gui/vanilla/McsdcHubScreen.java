@@ -2,21 +2,21 @@ package com.mcsdc.addon.gui.vanilla;
 
 import com.mcsdc.addon.ServerListHelper;
 import com.mcsdc.addon.system.McsdcSystem;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.Text;
-import net.minecraft.util.Colors;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.CommonColors;
 
 public class McsdcHubScreen extends McsdcParentScreen {
     public McsdcHubScreen(Screen parent) {
-        super(Text.literal("MCSDC"), parent);
+        super(Component.literal("MCSDC"), parent);
     }
 
     @Override
     protected void init() {
         if (McsdcSystem.get().getToken().isEmpty()) {
-            client.setScreen(new LoginBridgeScreen(parent));
+            minecraft.setScreen(new LoginBridgeScreen(parent));
             return;
         }
 
@@ -25,43 +25,43 @@ public class McsdcHubScreen extends McsdcParentScreen {
         int bw = 200;
         int gap = 24;
 
-        addMenuButton("Find Servers", y, bw, b -> client.setScreen(new McsdcBrowseScreen(this)));
+        addMenuButton("Find Servers", y, bw, b -> minecraft.setScreen(new McsdcBrowseScreen(this)));
         y += gap;
 
-        addMenuButton("Friends", y, bw, b -> client.setScreen(new McsdcFriendsScreen(this)));
+        addMenuButton("Friends", y, bw, b -> minecraft.setScreen(new McsdcFriendsScreen(this)));
         y += gap;
 
-        addMenuButton("Recent Servers", y, bw, b -> client.setScreen(new McsdcRecentScreen(this)));
+        addMenuButton("Recent Servers", y, bw, b -> minecraft.setScreen(new McsdcRecentScreen(this)));
         y += gap;
 
-        addMenuButton("Find Player", y, bw, b -> client.setScreen(new McsdcFindPlayerScreen(this)));
+        addMenuButton("Find Player", y, bw, b -> minecraft.setScreen(new McsdcFindPlayerScreen(this)));
         y += gap;
 
-        addMenuButton("Ticket ID", y, bw, b -> client.setScreen(new McsdcTicketScreen(this)));
+        addMenuButton("Ticket ID", y, bw, b -> minecraft.setScreen(new McsdcTicketScreen(this)));
         y += gap;
 
         addMenuButton("Clear MCSDC Servers", y, bw, b -> ServerListHelper.removeMcsdcServers());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Logout"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("Logout"), b -> {
             McsdcSystem.get().setToken("");
             McsdcSystem.get().setUsername("");
             McsdcSystem.get().setLevel(-1);
-            client.setScreen(new LoginBridgeScreen(parent));
-        }).dimensions(cx - bw / 2 - 52, height - 52, 98, 20).build());
+            minecraft.setScreen(new LoginBridgeScreen(parent));
+        }).bounds(cx - bw / 2 - 52, height - 52, 98, 20).build());
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Done"), b -> close())
-            .dimensions(cx - bw / 2 + 54, height - 52, 98, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Done"), b -> onClose())
+            .bounds(cx - bw / 2 + 54, height - 52, 98, 20).build());
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-        super.render(context, mouseX, mouseY, delta);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 20, Colors.WHITE);
-        context.drawCenteredTextWithShadow(textRenderer, "Logged in as: " + McsdcSystem.get().getUsername(), width / 2, 36, Colors.LIGHT_GRAY);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        super.extractRenderState(context, mouseX, mouseY, delta);
+        context.centeredText(font, title, width / 2, 20, CommonColors.WHITE);
+        context.centeredText(font, "Logged in as: " + McsdcSystem.get().getUsername(), width / 2, 36, CommonColors.LIGHT_GRAY);
     }
 
-    private void addMenuButton(String label, int y, int width, ButtonWidget.PressAction action) {
-        addDrawableChild(ButtonWidget.builder(Text.literal(label), action)
-            .dimensions(this.width / 2 - width / 2, y, width, 20).build());
+    private void addMenuButton(String label, int y, int width, Button.OnPress action) {
+        addRenderableWidget(Button.builder(Component.literal(label), action)
+            .bounds(this.width / 2 - width / 2, y, width, 20).build());
     }
 }

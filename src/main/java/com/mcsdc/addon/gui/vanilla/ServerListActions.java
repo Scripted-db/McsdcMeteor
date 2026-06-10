@@ -3,8 +3,8 @@ package com.mcsdc.addon.gui.vanilla;
 import com.mcsdc.addon.ServerListHelper;
 import com.mcsdc.addon.gui.ServerInfoScreen;
 import com.mcsdc.addon.system.ServerStorage;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.Button;
 import org.jetbrains.annotations.Nullable;
 
 public final class ServerListActions {
@@ -25,13 +25,13 @@ public final class ServerListActions {
         if (server != null) ServerListHelper.addMcsdcServer(server.ip());
     }
 
-    public static void info(MinecraftClient client, McsdcServerListWidget list) {
+    public static void info(Minecraft minecraft, McsdcServerListWidget list) {
         ServerStorage server = selected(list);
-        if (server != null) client.setScreen(new ServerInfoScreen(server.ip()));
+        if (server != null) minecraft.setScreen(new ServerInfoScreen(server.ip()));
     }
 
-    public static void setActive(boolean active, ButtonWidget... buttons) {
-        for (ButtonWidget button : buttons) {
+    public static void setActive(boolean active, Button... buttons) {
+        for (Button button : buttons) {
             if (button != null) button.active = active;
         }
     }

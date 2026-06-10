@@ -1,25 +1,25 @@
 package com.mcsdc.addon.gui.vanilla;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.TitleScreen;
-import net.minecraft.client.gui.screen.multiplayer.ConnectScreen;
-import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
-import net.minecraft.client.network.ServerAddress;
-import net.minecraft.client.network.ServerInfo;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.client.gui.screens.ConnectScreen;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
+import net.minecraft.client.multiplayer.resolver.ServerAddress;
+import net.minecraft.client.multiplayer.ServerData;
 
 public final class VanillaScreens {
     private VanillaScreens() {}
 
     public static void connectTo(String address) {
-        connectTo(MinecraftClient.getInstance(), address);
+        connectTo(Minecraft.getInstance(), address);
     }
 
-    public static void connectTo(MinecraftClient client, String address) {
-        ConnectScreen.connect(
-            new MultiplayerScreen(new TitleScreen()),
+    public static void connectTo(Minecraft client, String address) {
+        ConnectScreen.startConnecting(
+            new JoinMultiplayerScreen(new TitleScreen()),
             client,
-            ServerAddress.parse(address),
-            new ServerInfo("", address, ServerInfo.ServerType.OTHER),
+            ServerAddress.parseString(address),
+            new ServerData("", address, ServerData.Type.OTHER),
             false,
             null
         );
