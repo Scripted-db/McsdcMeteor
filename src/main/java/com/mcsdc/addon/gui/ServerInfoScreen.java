@@ -28,7 +28,7 @@ public class ServerInfoScreen extends WindowScreen {
     private final String ip;
 
     public ServerInfoScreen(String ip) {
-        super(GuiThemes.get(), "ServerData");
+        super(GuiThemes.get(), "Server Info");
         this.ip = ip;
     }
 
