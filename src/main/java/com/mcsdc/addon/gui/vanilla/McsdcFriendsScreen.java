@@ -155,7 +155,17 @@ public class McsdcFriendsScreen extends McsdcParentScreen {
                     list.invalidate();
                     rebuildUi();
                 }
-            }));
+            }))
+            .exceptionally(e -> {
+                minecraft.execute(() -> {
+                    busy = null;
+                    Throwable cause = e.getCause() != null ? e.getCause() : e;
+                    String msg = cause.getMessage();
+                    status = msg != null && !msg.isBlank() ? msg : "request failed";
+                    updateActionBtn();
+                });
+                return null;
+            });
     }
 
     private void runAction() {
@@ -180,7 +190,17 @@ public class McsdcFriendsScreen extends McsdcParentScreen {
                     list.invalidate();
                     rebuildUi();
                 }
-            }));
+            }))
+            .exceptionally(e -> {
+                minecraft.execute(() -> {
+                    busy = null;
+                    Throwable cause = e.getCause() != null ? e.getCause() : e;
+                    String msg = cause.getMessage();
+                    status = msg != null && !msg.isBlank() ? msg : "request failed";
+                    updateActionBtn();
+                });
+                return null;
+            });
     }
 
     private void join(String address) {
