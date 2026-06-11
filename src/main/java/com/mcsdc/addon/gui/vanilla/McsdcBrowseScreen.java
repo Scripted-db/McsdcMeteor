@@ -212,7 +212,17 @@ public class McsdcBrowseScreen extends McsdcParentScreen {
             submittedSearch.results = new ArrayList<>(results);
             rememberSearch(submittedSearch, state.statusMessage);
             updateActionButtons();
-        }));
+        })).exceptionally(ex -> {
+            Main.LOG.error("Failed to search", ex);
+            minecraft.execute(() -> {
+                searching = false;
+                Throwable root = ex.getCause() != null ? ex.getCause() : ex;
+                String msg = root.getMessage();
+                state.statusMessage = "Error: " + (msg != null ? msg : "Unknown error");
+                updateActionButtons();
+            });
+            return null;
+        });
     }
 
     private Object resolveVersion() {
