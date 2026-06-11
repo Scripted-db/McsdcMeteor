@@ -87,6 +87,7 @@ public class McsdcFriendsScreen extends McsdcParentScreen {
                 .thenAccept(r -> minecraft.execute(() -> {
                     if (r.ok()) tab.ok(Api.unwrapArray(r.body()));
                     else tab.fail(r.error());
+                    if (tab != activeTab()) return;
                     status = tab.error.isEmpty() ? "" : tab.error;
                     populateList();
                     updateActionBtn();
@@ -94,6 +95,7 @@ public class McsdcFriendsScreen extends McsdcParentScreen {
                 .exceptionally(e -> {
                     minecraft.execute(() -> {
                         tab.fail(e.getMessage());
+                        if (tab != activeTab()) return;
                         status = tab.error;
                         populateList();
                     });
