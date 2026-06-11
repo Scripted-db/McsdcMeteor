@@ -33,6 +33,8 @@ public abstract class GameMenuMixin extends Screen {
 
     @Inject(method = "createPauseMenu", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/gui/layouts/GridLayout$RowHelper;addChild(Lnet/minecraft/client/gui/layouts/LayoutElement;I)Lnet/minecraft/client/gui/layouts/LayoutElement;", shift = At.Shift.AFTER), locals = LocalCapture.CAPTURE_FAILHARD)
     private void oninitWidgets(CallbackInfo ci, GridLayout gridLayout, GridLayout.RowHelper helper){
+        if (mc.getConnection() == null) return;
+
         ServerData info = mc.getConnection().getServerData();
         if(info == null) return;
 

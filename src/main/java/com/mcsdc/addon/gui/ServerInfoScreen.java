@@ -176,7 +176,9 @@ public class ServerInfoScreen extends WindowScreen {
                             accounts.add(theme.button("Login & rejoin")).expandX().widget().action = () -> {
                                 new CrackedAccount(info.name).login();
 
-                                ServerData serverInfo = mc.getConnection().getServerData();
+                                ServerData serverInfo = mc.getConnection() != null && mc.getConnection().getServerData() != null
+                                    ? mc.getConnection().getServerData()
+                                    : new ServerData("Mcsdc " + this.ip, this.ip, ServerData.Type.OTHER);
                                 mc.disconnectFromWorld(Component.literal(""));
                                 ConnectScreen.startConnecting(new JoinMultiplayerScreen(new TitleScreen()), mc,
                                         ServerAddress.parseString(serverInfo.ip), serverInfo, false, null);
