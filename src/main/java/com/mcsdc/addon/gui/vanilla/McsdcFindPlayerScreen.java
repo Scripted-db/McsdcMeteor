@@ -21,6 +21,7 @@ public class McsdcFindPlayerScreen extends McsdcParentScreen {
     private McsdcServerListWidget serverList;
     private List<ServerStorage> results = new ArrayList<>();
     private String status = "";
+    private boolean searching = false;
     private Button joinBtn;
     private Button addBtn;
     private Button infoBtn;
@@ -63,16 +64,19 @@ public class McsdcFindPlayerScreen extends McsdcParentScreen {
     }
 
     private void runSearch() {
+        if (searching) return;
         String query = playerField.getValue().trim();
         if (query.isEmpty()) {
             status = "Enter a name or UUID.";
             return;
         }
+        searching = true;
         status = "Searching...";
         CompletableFuture.supplyAsync(() -> {
             JsonObject body = FindPlayerSearchBuilder.create(query);
             return Api.postJson("/search/player", body);
         }).thenAccept(response -> minecraft.execute(() -> {
+            searching = false;
             ServerSearchResults.ParseResult parsed = ServerSearchResults.parse(response);
             if (!parsed.ok()) {
                 status = parsed.error();
@@ -82,7 +86,15 @@ public class McsdcFindPlayerScreen extends McsdcParentScreen {
             status = ServerSearchResults.statusFor(results);
             serverList.setServers(results);
             updateButtons();
-        }));
+        })).exceptionally(ex -> {
+            minecraft.execute(() -> {
+                searching = false;
+                Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                status = "Error: " + (cause.getMessage() != null ? cause.getMessage() : "Unknown error");
+                updateButtons();
+            });
+            return null;
+        });
     }
 
     private void addAll() {
